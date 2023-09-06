@@ -7,7 +7,7 @@ ASSUME CS:COMSEG,DS:COMSEG,ES:COMSEG,SS:COMSEG
 
 ORG 80H             
 CMDCNT DB ?          ;COMMAND LINE COUNT
-CMDSTR DB 80 DUP(?)  ;COMMAND LINE BUFFER
+CMDSTR DB 127 DUP(?)  ;COMMAND LINE BUFFER
    
 START PROC FAR
        JMP ENTRY     ;JUMP PASS DATA
@@ -27,66 +27,38 @@ FlagError				db		0
 ;SCAN INPUT PARAMETER LINE
 
 ENTRY:  
-   MOV      si,OFFSET CMDSTR ;STRING
-   lea      DI, cmdline
-       
-   MOV      CH,0
-   MOV      CL,ES:[80h]      ;PARAMETER COUNT by variable CMDCNT
-   CMP      CX,0
-   JNZ      get_command_line          ;YES - PROCESS COMMAND LINE PARAMETERS
-   JMP      no_arguments           ;NO - PARAMETERS
+   mov      si, offset CMDSTR ;STRING
+   mov      ch,0
+   mov      cl,es:[80h]      ;PARAMETER COUNT by variable CMDCNT
+   cmp      cx,0
+   jnz      parse_command_line          ;YES - PROCESS COMMAND LINE PARAMETERS
+   jmp      no_arguments           ;NO - PARAMETERS
    
-get_command_line:   
-   MOV      al,[si]
-   mov      [di],al
-
-   inc      si
-   inc      di             ;INCREMENT STRING
-   LOOP     get_command_line
-   
-no_arguments:  NOP
-
-;START OF MAIN PROGRAM
-   lea		bx,cmdline			; Coloca mensagem que pede o nome do arquivo
-   call	   printf_s    
-
-   call     parse_command_line
-
-
-;RETURN TO DOS
-DONE: 
-   PUSH     DS
-   MOV      AX,0
-   PUSH     AX
-   RET
-START ENDP
-
-;
-;--------------------------------------------------------------------
-; Parse command line string
-;--------------------------------------------------------------------
-parse_command_line proc near
-    lea     si, offset cmdline
-
-    ; go to next arg
-    skip_space:
+parse_command_line:   
+   skip_space:
       mov   al, [si]
       cmp   al, ' '
       je    next_option
+      cmp   al, CR
+      je    invalid_option
       inc   si
       jmp   skip_space
-
-    next_option:
+   
+   next_option:
       inc   si
       mov   al, [si]
 
-        ; Verificar se encontramos uma opção válida
+      ; Verificar se encontramos uma opção válida
       cmp   al, '-'
       jne   invalid_option
+      cmp   al, CR
+      je    invalid_option
 
 		; Move string pointer
 		inc   si
 		mov   al, [si]
+      cmp   al, CR
+      je    invalid_option
 		cmp   al, 'f'
       je    f_option
 		cmp   al, 'o'
@@ -95,23 +67,35 @@ parse_command_line proc near
       je    n_option
       jmp   actg_option
 
-	f_option:
-      lea   bx,cmdline
-      call  printf_s
-	   jmp   skip_space
+   f_option:
+      lea   di, inputFile
+      inc   si
+      mov   al, [si]
+      cmp   al, ' '
+      jne   invalid_option
+      f_option_loop:
+         inc   si
+         mov   al, [si]
+         cmp   al, ' '
+         je    skip_space
+         cmp   al, CR
+         je    skip_space
+         ;inc   di
+         mov   [di], al
+         jmp   f_option_loop 
 
 	o_option:
-      lea   bx,cmdline
+      lea   bx,ErrorCommandLineMsg
       call  printf_s
 	   jmp   skip_space
 
 	n_option:
-      lea   bx,cmdline
+      lea   bx,ErrorCommandLineMsg
       call  printf_s
 	   jmp   skip_space
 
 	actg_option:
-      lea   bx,cmdline
+      lea   bx,ErrorCommandLineMsg
       call  printf_s
       jmp   done_parsing
 
@@ -119,11 +103,23 @@ parse_command_line proc near
       lea   bx,ErrorCommandLineMsg
       call  printf_s
       mov	FlagError,1
-
+      jmp   no_arguments
     done_parsing:
       ret
 
-parse_command_line endp
+      LOOP     parse_command_line
+   
+no_arguments:  NOP
+
+      lea   bx,inputFile
+      call  printf_s
+;RETURN TO DOS
+DONE: 
+   PUSH     DS
+   MOV      AX,0
+   PUSH     AX
+   RET
+START ENDP
 
 ;
 ;--------------------------------------------------------------------
