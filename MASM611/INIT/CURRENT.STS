@@ -1,14 +1,15 @@
 [shared-]
-	pmark="C:\teste.asm" 72 1
+	pmark="C:\teste.asm" 83 1
 	version=3
 [debug-]
 	target="c:\teste.exe"
 	synonym=;C:
+	genericbp='E "{,teste.asm,C:\teste.exe} .114"
 [cv]
 	wndstate=0 80 14 0 1 0 0 0 0 0 0 0 0 0 -1
 	wndstate=1 80 5 0 1 0 0 0 0 0 0 0 0 0 -1
 	wndstate=2 67 4 0 1 0 0 0 0 0 0 0 0 0 -1
-	wndstate=3 67 16 0 1 1 1 0 0 0 71 66 0 0 -1
+	wndstate=3 67 16 0 1 1 1 0 0 0 82 74 0 0 -1
 	wndstate=4 67 7 3 8 0 0 0 0 0 0 0 0 0 -1
 	wndstate=5 67 4 0 16 0 0 0 0 0 0 0 0 0 -1
 	wndstate=6 67 4 0 15 0 0 0 0 0 0 0 0 0 -1
