@@ -68,45 +68,27 @@ argv dw 0                    ; Ponteiro para argumentos da linha de comando
         .code
         .startup
 
-		; Obter a linha de comando
-		mov ah, 62h
-		lea dx, commandLine
-		int 21h
+		mov		ax,ds
+		mov		es,ax
 
-		; Parse da linha de comando
-		call parse_command_line
+		;	Pega o nome do arquivo
+		call GetFileName
 
-		; Implemente o processamento das opções aqui
-		; Exemplo:
-		; mov ah, options
-		; mov al, 'f'
-		; call findOption
-		; jc processFileInput
+		;	Quebra a linha
+		lea		bx,MsgCRLF
+		call	printf_s
 
-		; Finalize o programa
-		mov ah, 4Ch
-		int 21h
-		; mov		ax,ds
-		; mov		es,ax
-
-		; ;	Pega o nome do arquivo
-		; call GetFileName
-
-		; ;	Quebra a linha
-		; lea		bx,MsgCRLF
-		; call	printf_s
-
-		; ;	Abre o arquivo
-		; lea		dx,FileName
-		; call 	fopen
-		; jc		ErrorOpenFile		;If (CF == 1), erro ao abrir o arquivo
-		; mov		FileHandle,ax		; Salva handle do arquivo
-		; ;	Cria o arquivo de saida
-		; call	pegaNome
-		; lea		dx, FileNameDst
-		; call	fcreate
-		; jc		ErrorCreateFile
-		; mov		FileHandleDst, ax
+		;	Abre o arquivo
+		lea		dx,FileName
+		call 	fopen
+		jc		ErrorOpenFile		;If (CF == 1), erro ao abrir o arquivo
+		mov		FileHandle,ax		; Salva handle do arquivo
+		;	Cria o arquivo de saida
+		call	pegaNome
+		lea		dx, FileNameDst
+		call	fcreate
+		jc		ErrorCreateFile
+		mov		FileHandleDst, ax
 		
 LoopReadFile:
     mov bx, FileHandle
@@ -235,68 +217,6 @@ CloseAndFinal:
 	call printf_s
 Final:
 		.exit
-
-;
-;--------------------------------------------------------------------
-;Funcao: Parse command line
-;--------------------------------------------------------------------
-parse_command_line proc
-    mov si, offset commandLine
-    mov al, [si]  ; Inicialmente, al aponta para o primeiro caractere da linha de comando
-
-    ; Pule o nome do programa
-    find_space:
-        inc si
-        mov al, [si]
-        cmp al, ' '
-        jne find_space
-
-    next_option:
-        inc si
-        mov al, [si]
-
-        ; Verificar se encontramos uma opção válida
-        cmp al, '-'
-        jne invalid_option
-
-		; Move string pointer
-		inc si
-		mov al, [si]
-
-		cmp al, 'f'
-        je f_option
-		cmp al, 'o'
-        je o_option
-		cmp al, 'n'
-        je n_option
-        jmp actg_option
-
-        ; Processar a opção
-        inc si
-        mov al, [si]
-
-        jmp next_option
-
-	f_option:
-
-		jmp find_space
-
-	o_option:
-
-		jmp find_space
-
-	n_option:
-
-		jmp find_space
-
-	actg_option:
-
-
-    done_parsing:
-        ret
-
-parse_command_line endp
-
 ;
 ;--------------------------------------------------------------------
 ;Funcao: Le o nome do arquivo do teclado
@@ -422,6 +342,61 @@ getChar	proc	near
 	mov		dl,FileBuffer
 	ret
 getChar	endp
+
+;
+;--------------------------------------------------------------------
+;Função recebe um char ASCII e coloca seu valor em Hexa em arquivo
+;Entra: Bx-> File Handle
+;		al-> Char ASCII
+;Sai:	CF-> 0 se deu certo
+;--------------------------------------------------------------------
+putChar	proc	near
+		mov		BufferPutChar, al
+		and		al, 0f0h
+		
+
+		shr		al, 1
+		shr		al, 1
+		shr		al, 1
+		shr		al, 1
+		add		al, al
+		lea		bx,VetorHexa
+		and		ah, 0
+		add		bx, ax
+		mov		dl, [bx]
+		mov		bx, FileHandleDst
+		call 	setChar
+		jc		ErroPutChar
+		
+		mov		al, BufferPutChar
+		and		al, 0fh
+		add		al, al
+		lea		bx,VetorHexa
+		and		ah, 0
+		add		bx, ax
+		mov		dl, [bx]
+		mov		bx, FileHandleDst
+		call	setChar
+
+ErroPutChar:
+		ret
+putChar	endp
+
+;
+;--------------------------------------------------------------------
+;Entra: BX -> file handle
+;       dl -> caractere
+;Sai:   AX -> numero de caracteres escritos
+;		CF -> "0" se escrita ok
+;--------------------------------------------------------------------
+setChar	proc	near
+	mov		ah,40h
+	mov		cx,1
+	mov		FileBuffer,dl
+	lea		dx,FileBuffer
+	int		21h
+	ret
+setChar	endp
 
 ;
 ;--------------------------------------------------------------------

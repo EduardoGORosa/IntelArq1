@@ -1,0 +1,29 @@
+[shared-]
+	pmark=
+	version=3
+[debug-]
+	target="c:\teste.exe"
+	synonym=;C:
+[cv]
+	wndstate=0 80 14 0 1 0 0 0 0 0 0 0 0 0 -1
+	wndstate=1 80 5 0 1 0 0 0 0 0 0 0 0 0 -1
+	wndstate=2 67 4 0 1 0 0 0 0 0 0 0 0 0 -1
+	wndstate=3 67 16 0 1 1 1 0 0 0 520 520 0 0 -1
+	wndstate=4 67 7 3 8 0 0 0 0 0 0 0 0 0 -1
+	wndstate=5 67 4 0 16 0 0 0 0 0 0 0 0 0 -1
+	wndstate=6 67 4 0 15 0 0 0 0 0 0 0 0 0 -1
+	wndstate=7 13 23 67 1 0 1 0 0 0 0 0 0 0 -1
+	wndstate=8 67 4 0 16 0 0 0 0 0 0 0 0 0 -1
+	wndstate=9 67 7 0 17 0 1 0 1 0 3 0 0 0 -1
+	command=use auto
+	command=n10
+	screensize=25
+	command=oh+
+	command=ov+
+	command=oa+
+	command=vs1
+	command=oc+
+	command=of+
+	command=o3-
+	command=ollf   
+	tracespeed=250

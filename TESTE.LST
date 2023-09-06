@@ -1,0 +1,232 @@
+Microsoft (R) Macro Assembler Version 6.11		    09/05/23 23:05:17
+teste.asm						     Page 1 - 1
+
+
+				;             Trabalho Intel
+				;
+				;         Eduardo Rosa   00335503
+
+ 0000				COMSEG SEGMENT PARA PUBLIC 'CODE'
+				ASSUME CS:COMSEG,DS:COMSEG,ES:COMSEG,SS:COMSEG
+
+				ORG 80H             
+ 0080 00			CMDCNT DB ?          ;COMMAND LINE COUNT
+ 0081  0050 [			CMDSTR DB 80 DUP(?)  ;COMMAND LINE BUFFER
+        00
+       ]
+				   
+ 00D1				START PROC FAR
+ 00D1  E9 00E0			       JMP ENTRY     ;JUMP PASS DATA
+				;--------------------------------------------
+				; DATA
+				;--------------------------------------------
+ = 000D				CR					      equ		0dh
+ = 000A				LF					      equ		0ah
+
+ 00D4  007F [			cmdline              db    127 dup(?)
+        00
+       ]
+ 0153  0032 [			inputFile            db    50 dup(?)     ; Nome do arquivo de entrada
+        00
+       ]
+ 0185 61 2E 6F 75 74 00		outputFile           db    'a.out',0       ; Nome padrão do arquivo de saída
+ 018B 0000			groupSize            dw    0               ; Tamanho do grupo de bases
+ 018D 45 72 72 6F 20 6E		ErrorCommandLineMsg	db		"Erro na escrita da linha de comando", CR, LF, 0
+       61 20 65 73 63 72
+       69 74 61 20 64 61
+       20 6C 69 6E 68 61
+       20 64 65 20 63 6F
+       6D 61 6E 64 6F 0D
+       0A 00
+ 01B3 00			FlagError				db		0
+				;--------------------------------------------
+				;SCAN INPUT PARAMETER LINE
+
+ 01B4				ENTRY:  
+ 01B4  BE 0081 R		   MOV      si,OFFSET CMDSTR ;STRING
+ 01B7  8D 3E 00D4 R		   lea      DI, cmdline
+				       
+ 01BB  B5 00			   MOV      CH,0
+ 01BD  26: 8A 0E 0080		   MOV      CL,ES:[80h]      ;PARAMETER COUNT by variable CMDCNT
+ 01C2  83 F9 00			   CMP      CX,0
+ 01C5  75 02			   JNZ      get_command_line          ;YES - PROCESS COMMAND LINE PARAMETERS
+ 01C7  EB 08			   JMP      no_arguments           ;NO - PARAMETERS
+				   
+ 01C9				get_command_line:   
+ 01C9  8A 04			   MOV      al,[si]
+ 01CB  88 05			   mov      [di],al
+
+ 01CD  46			   inc      si
+ 01CE  47			   inc      di             ;INCREMENT STRING
+ 01CF  E2 F8			   LOOP     get_command_line
+				   
+ 01D1  90			no_arguments:  NOP
+
+				;START OF MAIN PROGRAM
+ 01D2  8D 1E 00D4 R		   lea		bx,cmdline			; Coloca mensagem que pede o nome do arquivo
+ 01D6  E8 005F			   call	   printf_s    
+
+ 01D9  E8 0006			   call     parse_command_line
+
+
+				;RETURN TO DOS
+ 01DC				DONE: 
+ 01DC  1E			   PUSH     DS
+ 01DD  B8 0000			   MOV      AX,0
+ 01E0  50			   PUSH     AX
+ 01E1  CB			   RET
+ 01E2				START ENDP
+
+				;
+				;--------------------------------------------------------------------
+				; Parse command line string
+				;--------------------------------------------------------------------
+ 01E2				parse_command_line proc near
+ 01E2  8D 36 00D4 R		    lea     si, offset cmdline
+
+				    ; go to next arg
+ 01E6				    skip_space:
+ 01E6  8A 04			      mov   al, [si]
+ 01E8  3C 20			      cmp   al, ' '
+ 01EA  74 03			      je    next_option
+ 01EC  46			      inc   si
+ 01ED  EB F7			      jmp   skip_space
+
+ 01EF				    next_option:
+ 01EF  46			      inc   si
+ 01F0  8A 04			      mov   al, [si]
+
+				        ; Verificar se encontramos uma opção válida
+ 01F2  3C 2D			      cmp   al, '-'
+ 01F4  75 35			      jne   invalid_option
+
+						; Move string pointer
+ 01F6  46					inc   si
+ 01F7  8A 04					mov   al, [si]
+ 01F9  3C 66					cmp   al, 'f'
+ 01FB  74 0A			      je    f_option
+ 01FD  3C 6F					cmp   al, 'o'
+ 01FF  74 0F			      je    o_option
+ 0201  3C 6E					cmp   al, 'n'
+ 0203  74 14			      je    n_option
+ 0205  EB 1B			      jmp   actg_option
+
+ 0207					f_option:
+ 0207  8D 1E 00D4 R		      lea   bx,cmdline
+ 020B  E8 002A			      call  printf_s
+ 020E  EB D6				   jmp   skip_space
+
+ 0210					o_option:
+ 0210  8D 1E 00D4 R		      lea   bx,cmdline
+ 0214  E8 0021			      call  printf_s
+ 0217  EB CD				   jmp   skip_space
+
+ 0219					n_option:
+ 0219  8D 1E 00D4 R		      lea   bx,cmdline
+ 021D  E8 0018			      call  printf_s
+ 0220  EB C4				   jmp   skip_space
+
+ 0222					actg_option:
+ 0222  8D 1E 00D4 R		      lea   bx,cmdline
+ 0226  E8 000F			      call  printf_s
+ 0229  EB 0C			      jmp   done_parsing
+
+ 022B				    invalid_option:
+ 022B  8D 1E 018D R		      lea   bx,ErrorCommandLineMsg
+ 022F  E8 0006			      call  printf_s
+ 0232  C6 06 01B3 R 01		      mov	FlagError,1
+
+ 0237				    done_parsing:
+ 0237  C3			      ret
+
+ 0238				parse_command_line endp
+
+				;
+				;--------------------------------------------------------------------
+				;Função Escrever um string na tela
+				;		printf_s(char *s -> BX)
+				;--------------------------------------------------------------------
+ 0238				printf_s	proc	near
+ 0238  8A 17				mov		dl,[bx]
+ 023A  80 FA 00				cmp		dl,0
+ 023D  74 09				je		   ps_1
+
+ 023F  53				push	   bx
+ 0240  B4 02				mov		ah,2
+ 0242  CD 21				int		21H
+ 0244  5B				pop		bx
+
+ 0245  43				inc		bx		
+ 0246  EB F0				jmp		printf_s
+						
+ 0248				ps_1:
+ 0248  C3				ret
+ 0249				printf_s	endp
+
+				;
+				;--------------------------------------------------------------------
+				;Função Escrever um char na tela
+				;		Entra: DL -> Char a ser escrito
+				;--------------------------------------------------------------------
+ 0249				printf_c	proc	near
+ 0249  B4 02					mov		ah, 2
+ 024B  CD 21					int		21H
+ 024D  C3					ret
+ 024E				printf_c	endp
+
+ 024E				COMSEG ENDS
+
+				END START
+Microsoft (R) Macro Assembler Version 6.11		    09/05/23 23:05:17
+teste.asm						     Symbols 2 - 1
+
+
+
+
+Segments and Groups:
+
+                N a m e                 Size     Length   Align   Combine Class
+
+COMSEG . . . . . . . . . . . . .	16 Bit	 024E	  Para	  Public  'CODE'	
+
+
+Procedures,  parameters and locals:
+
+                N a m e                 Type     Value    Attr
+
+START  . . . . . . . . . . . . .	P Far	 00D1	  COMSEG	Length= 0111 Private
+parse_command_line . . . . . . .	P Near	 01E2	  COMSEG	Length= 0056 Private
+printf_c . . . . . . . . . . . .	P Near	 0249	  COMSEG	Length= 0005 Private
+printf_s . . . . . . . . . . . .	P Near	 0238	  COMSEG	Length= 0011 Private
+
+
+Symbols:
+
+                N a m e                 Type     Value    Attr
+
+CMDCNT . . . . . . . . . . . . .	Byte	 0080	  COMSEG	
+CMDSTR . . . . . . . . . . . . .	Byte	 0081	  COMSEG	
+CR . . . . . . . . . . . . . . .	Number	 000Dh	 
+DONE . . . . . . . . . . . . . .	L Near	 01DC	  COMSEG	
+ENTRY  . . . . . . . . . . . . .	L Near	 01B4	  COMSEG	
+ErrorCommandLineMsg  . . . . . .	Byte	 018D	  COMSEG	
+FlagError  . . . . . . . . . . .	Byte	 01B3	  COMSEG	
+LF . . . . . . . . . . . . . . .	Number	 000Ah	 
+actg_option  . . . . . . . . . .	L Near	 0222	  COMSEG	
+cmdline  . . . . . . . . . . . .	Byte	 00D4	  COMSEG	
+done_parsing . . . . . . . . . .	L Near	 0237	  COMSEG	
+f_option . . . . . . . . . . . .	L Near	 0207	  COMSEG	
+get_command_line . . . . . . . .	L Near	 01C9	  COMSEG	
+groupSize  . . . . . . . . . . .	Word	 018B	  COMSEG	
+inputFile  . . . . . . . . . . .	Byte	 0153	  COMSEG	
+invalid_option . . . . . . . . .	L Near	 022B	  COMSEG	
+n_option . . . . . . . . . . . .	L Near	 0219	  COMSEG	
+next_option  . . . . . . . . . .	L Near	 01EF	  COMSEG	
+no_arguments . . . . . . . . . .	L Near	 01D1	  COMSEG	
+o_option . . . . . . . . . . . .	L Near	 0210	  COMSEG	
+outputFile . . . . . . . . . . .	Byte	 0185	  COMSEG	
+ps_1 . . . . . . . . . . . . . .	L Near	 0248	  COMSEG	
+skip_space . . . . . . . . . . .	L Near	 01E6	  COMSEG	
+
+	   0 Warnings
+	   0 Errors
