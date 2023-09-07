@@ -1,0 +1,380 @@
+Microsoft (R) Macro Assembler Version 6.11		    09/06/23 21:51:29
+trabalho.asm						     Page 1 - 1
+
+
+				;             Trabalho Intel
+				;
+				;         Eduardo Rosa   00335503
+
+				.model small
+				.stack
+
+ 0000				.data
+				ORG 80H             
+ 0080 00			CMDCNT DB ?          ;COMMAND LINE COUNT
+ 0081  007F [			CMDSTR DB 127 DUP(?)  ;COMMAND LINE BUFFER
+        00
+       ]
+				;--------------------------------------------
+				; DATA
+				;--------------------------------------------
+ = 000D				CR					      equ		0dh
+ = 000A				LF					      equ		0ah
+
+ 0100  007F [			cmdline              db    127 dup(?)
+        00
+       ]
+ 017F  0032 [			inputFile            db    50 dup(?)        ; Nome do arquivo de entrada
+        00
+       ]
+ 01B1  0032 [			outputFile           db    50 dup(?)        ; Nome padrão do arquivo de saída
+        00
+       ]
+ 01E3 61 2E 6F 75 74 00		defaultOutputFile    db    'a.out', 0       ; Nome padrão do arquivo de saída
+ 01E9 00			groupSize            db    0                ; Tamanho do grupo de bases
+ 01EA  0005 [			actg                 db    5  dup(?)
+        00
+       ]
+ 01EF 00			actg_mais            db    0
+ 01F0 61 63 74 67 2B 00		actg_valid           db    "actg+", 0
+ 01F6 45 72 72 6F 20 6E		errorCommandLineMsg	db		"Erro na escrita da linha de comando", CR, LF, 0
+       61 20 65 73 63 72
+       69 74 61 20 64 61
+       20 6C 69 6E 68 61
+       20 64 65 20 63 6F
+       6D 61 6E 64 6F 0D
+       0A 00
+ 021C 00			flagError				db		0
+ 021D 0D 0A 00			MsgCRLF					db		CR, LF, 0
+				;--------------------------------------------
+				;SCAN INPUT PARAMETER LINE
+
+ 0000				.code
+				.startup
+ 0017  BE 0081			   mov      si, 81h
+ 001A  B5 00			   mov      ch,0
+ 001C  26: 8A 0E 0080		   mov      cl,es:[80h]      ;PARAMETER COUNT by variable CMDCNT
+ 0021  83 F9 00			   cmp      cx,0
+ 0024  75 03			   jnz      parse_command_line          ;YES - PROCESS COMMAND LINE PARAMETERS
+ 0026  E9 00E8			   jmp      no_arguments           ;NO - PARAMETERS
+				   
+ 0029				parse_command_line:   
+ 0029				   skip_space:
+ 0029  26: 8A 04		      mov   al, es:[si]
+ 002C  3C 20			      cmp   al, ' '
+ 002E  74 0A			      je    next_option
+ 0030  3C 0D			      cmp   al, CR
+ 0032  75 03 E9 00DA		      je    no_arguments
+ 0037  46			      inc   si
+ 0038  EB EF			      jmp   skip_space
+				   
+ 003A				   next_option:
+ 003A  46			      inc   si
+ 003B  26: 8A 04		      mov   al, es:[si]
+
+				      ; Verificar se encontramos uma opção válida
+ 003E  3C 2D			      cmp   al, '-'
+ 0040  74 03 E9 00BD		      jne   invalid_option
+
+						; Move string pointer
+ 0045  46					inc   si
+ 0046  26: 8A 04				mov   al, es:[si]
+ 0049  3C 0D			      cmp   al, CR
+ 004B  75 03 E9 00B2		      je    invalid_option
+ 0050  3C 66					cmp   al, 'f'
+ 0052  74 0A			      je    f_option
+ 0054  3C 6F					cmp   al, 'o'
+ 0056  74 26			      je    o_option
+ 0058  3C 6E					cmp   al, 'n'
+ 005A  74 3F			      je    n_option
+ 005C  EB 69			      jmp   actg_option
+
+ 005E				   f_option:
+ 005E  8D 3E 017F R		      lea   di, inputFile
+ 0062  46			      inc   si
+ 0063  26: 8A 04		      mov   al, es:[si]
+ 0066  3C 20			      cmp   al, ' '
+ 0068  74 03 E9 0095		      jne   invalid_option
+ 006D				      f_option_loop:
+ 006D  46			         inc   si
+ 006E  26: 8A 04		         mov   al, es:[si]
+ 0071  3C 20			         cmp   al, ' '
+ 0073  74 B4			         je    skip_space
+ 0075  3C 0D			         cmp   al, CR
+ 0077  74 B0			         je    skip_space
+ 0079  88 05			         mov   [di], al
+ 007B  47			         inc   di
+ 007C  EB EF			         jmp   f_option_loop 
+
+ 007E					o_option:
+ 007E  8D 3E 01B1 R		      lea   di, outputFile
+ 0082  46			      inc   si
+ 0083  26: 8A 04		      mov   al, es:[si]
+ 0086  3C 20			      cmp   al, ' '
+ 0088  75 78			      jne   invalid_option
+ 008A				      o_option_loop:
+ 008A  46			         inc   si
+ 008B  26: 8A 04		         mov   al, es:[si]
+ 008E  3C 20			         cmp   al, ' '
+ 0090  74 97			         je    skip_space
+ 0092  3C 0D			         cmp   al, CR
+ 0094  74 93			         je    skip_space
+ 0096  88 05			         mov   [di], al
+ 0098  47			         inc   di
+ 0099  EB EF			         jmp   o_option_loop 
+
+ 009B					n_option:
+ 009B  8D 3E 01E9 R		      lea   di, groupSize
+ 009F  46			      inc   si
+ 00A0  26: 8A 04		      mov   al, es:[si]
+ 00A3  3C 20			      cmp   al, ' '
+ 00A5  75 5B			      jne   invalid_option
+ 00A7				      n_option_loop:
+ 00A7  46			         inc   si
+ 00A8  26: 8A 04		         mov   al, es:[si]
+ 00AB  3C 20			         cmp   al, ' '
+ 00AD  74 11			         je    end_n_option
+ 00AF  3C 0D			         cmp   al, CR
+ 00B1  74 0D			         je    end_n_option
+ 00B3  3C 39			         cmp   al, 39h
+ 00B5  7F 4B			         jg    invalid_option
+ 00B7  3C 30			         cmp   al, 30h
+ 00B9  7C 47			         jl    invalid_option
+ 00BB  88 05			         mov   [di], al
+ 00BD  47			         inc   di
+ 00BE  EB E7			         jmp   n_option_loop
+ 00C0				      end_n_option:
+ 00C0  B0 00			         mov   al, 0
+ 00C2  88 05			         mov   [di], al
+ 00C4  E9 FF62			         jmp   skip_space
+
+ 00C7					actg_option:
+ 00C7  8D 3E 01F0 R		      lea   di, actg_valid
+ 00CB  3C 20			      cmp   al, ' '
+ 00CD  74 33			      je    invalid_option
+ 00CF  3C 0D			      cmp   al, CR            
+ 00D1  74 2F			      je    invalid_option
+ 00D3				   actg_check_loop:
+ 00D3  3C 20			      cmp   al, ' '            
+ 00D5  74 3A			      je    no_arguments
+ 00D7  3C 0D			      cmp   al, CR            
+ 00D9  74 36			      je    no_arguments              
+ 00DB  BB 0000			      mov   bx, 0           
+ 00DE				   search_loop:
+ 00DE  8A 09			      mov   cl, [di+bx]
+ 00E0  3A 01			      cmp   al, [di+bx]    
+ 00E2  74 08			      je    char_is_valid       
+ 00E4  43			      inc   bx              
+ 00E5  80 39 00			      cmp   byte ptr [di+bx], 0  
+ 00E8  75 F4			      jnz   search_loop       
+ 00EA  EB 13			      jmp   next_char
+				      
+ 00EC				   char_is_valid:
+ 00EC  46			      inc   si    
+ 00ED  8A D0			      mov   dl, al         
+ 00EF  EB E2			      jmp   actg_check_loop        
+
+ 00F1				   unique_char_loop:
+ 00F1  3A 05			      cmp   al, [di]                    
+ 00F3  74 0A			      je    next_char                      
+ 00F5  46			      inc   si                          
+ 00F6  E2 F9			      loop  unique_char_loop                
+ 00F8  88 05			      mov   [di], al
+ 00FA  8A D0			      mov   dl, al
+ 00FC  E8 0050			      call  printf_c                              
+
+ 00FF				   next_char:
+ 00FF  46			      inc   si                          
+ 0100  EB D1			      jmp   actg_check_loop                    
+				         
+
+ 0102				    invalid_option:
+ 0102  8D 1E 01F6 R		      lea   bx,errorCommandLineMsg
+ 0106  E8 0035			      call  printf_s
+ 0109  C6 06 021C R 01		      mov	flagError,1
+ 010E  E9 FF18			      jmp   skip_space
+				   
+ 0111  90			no_arguments:  NOP
+
+ 0112  8D 1E 017F R		      lea   bx,inputFile
+ 0116  E8 0025			      call  printf_s
+
+ 0119  8D 1E 021D R		      lea   bx,MsgCRLF
+ 011D  E8 001E			      call  printf_s
+
+ 0120  8D 1E 01B1 R		      lea   bx,outputFile
+ 0124  E8 0017			      call  printf_s
+
+ 0127  8D 1E 021D R		      lea   bx,MsgCRLF
+ 012B  E8 0010			      call  printf_s
+
+ 012E  8D 1E 01E9 R		      lea   bx,groupSize
+ 0132  E8 001F			      call  atoi
+ 0135  8B D8			      mov   bx,ax
+ 0137  E8 0015			      call  printf_c
+
+				.exit
+				;
+				;--------------------------------------------------------------------
+				;Função Escrever um string na tela
+				;		printf_s(char *s -> BX)
+				;--------------------------------------------------------------------
+ 013E				printf_s	proc	near
+ 013E  8A 17				mov		dl,[bx]
+ 0140  80 FA 00				cmp		dl,0
+ 0143  74 09				je		   ps_1
+
+ 0145  53				push	   bx
+ 0146  B4 02				mov		ah,2
+ 0148  CD 21				int		21H
+ 014A  5B				pop		bx
+
+ 014B  43				inc		bx		
+ 014C  EB F0				jmp		printf_s
+						
+ 014E				ps_1:
+ 014E  C3				ret
+ 014F				printf_s	endp
+
+				;
+				;--------------------------------------------------------------------
+				;Função Escrever um char na tela
+				;		Entra: DL -> Char a ser escrito
+				;--------------------------------------------------------------------
+ 014F				printf_c	proc	near
+ 014F  B4 02					mov		ah, 2
+ 0151  CD 21					int		21H
+ 0153  C3					ret
+ 0154				printf_c	endp
+
+				;
+				;--------------------------------------------------------------------
+				;Função:Converte um ASCII-DECIMAL para HEXA
+				;Entra: (S) -> DS:BX -> Ponteiro para o string de origem
+				;Sai:	(A) -> AX -> Valor "Hex" resultante
+				;Algoritmo:
+				;	A = 0;
+				;	while (*S!='\0') {
+				;		A = 10 * A + (*S - '0')
+				;		++S;
+				;	}
+				;	return
+				;--------------------------------------------------------------------
+ 0154				atoi	proc near
+
+						; A = 0;
+ 0154  B8 0000					mov		ax,0
+						
+ 0157				atoi_2:
+						; while (*S!='\0') {
+ 0157  80 3F 00					cmp		byte ptr[bx], 0
+ 015A  74 11					jz		   atoi_1
+
+						; 	A = 10 * A
+ 015C  B9 000A					mov		cx,10
+ 015F  F7 E1					mul		cx
+
+						; 	A = A + *S
+ 0161  B5 00					mov		ch,0
+ 0163  8A 0F					mov		cl,[bx]
+ 0165  03 C1					add		ax,cx
+
+						; 	A = A - '0'
+ 0167  83 E8 30					sub		ax,'0'
+
+						; 	++S
+ 016A  43					inc		bx
+						
+						;}
+ 016B  EB EA					jmp		atoi_2
+
+ 016D				atoi_1:
+						; return
+ 016D  C3					ret
+
+ 016E				atoi	endp
+
+				;--------------------------------------------------------------------
+						end
+				;--------------------------------------------------------------------
+
+
+				end
+Microsoft (R) Macro Assembler Version 6.11		    09/06/23 21:51:29
+trabalho.asm						     Symbols 2 - 1
+
+
+
+
+Segments and Groups:
+
+                N a m e                 Size     Length   Align   Combine Class
+
+DGROUP . . . . . . . . . . . . .	GROUP
+_DATA  . . . . . . . . . . . . .	16 Bit	 0220	  Word	  Public  'DATA'	
+STACK  . . . . . . . . . . . . .	16 Bit	 0400	  Para	  Stack	  'STACK'	 
+_TEXT  . . . . . . . . . . . . .	16 Bit	 016E	  Word	  Public  'CODE'	
+
+
+Procedures,  parameters and locals:
+
+                N a m e                 Type     Value    Attr
+
+atoi . . . . . . . . . . . . . .	P Near	 0154	  _TEXT	Length= 001A Private
+printf_c . . . . . . . . . . . .	P Near	 014F	  _TEXT	Length= 0005 Private
+printf_s . . . . . . . . . . . .	P Near	 013E	  _TEXT	Length= 0011 Private
+
+
+Symbols:
+
+                N a m e                 Type     Value    Attr
+
+@CodeSize  . . . . . . . . . . .	Number	 0000h	 
+@DataSize  . . . . . . . . . . .	Number	 0000h	 
+@Interface . . . . . . . . . . .	Number	 0000h	 
+@Model . . . . . . . . . . . . .	Number	 0002h	 
+@Startup . . . . . . . . . . . .	L Near	 0000	  _TEXT	
+@code  . . . . . . . . . . . . .	Text   	 _TEXT
+@data  . . . . . . . . . . . . .	Text   	 DGROUP
+@fardata?  . . . . . . . . . . .	Text   	 FAR_BSS
+@fardata . . . . . . . . . . . .	Text   	 FAR_DATA
+@stack . . . . . . . . . . . . .	Text   	 DGROUP
+CMDCNT . . . . . . . . . . . . .	Byte	 0080	  _DATA	
+CMDSTR . . . . . . . . . . . . .	Byte	 0081	  _DATA	
+CR . . . . . . . . . . . . . . .	Number	 000Dh	 
+LF . . . . . . . . . . . . . . .	Number	 000Ah	 
+MsgCRLF  . . . . . . . . . . . .	Byte	 021D	  _DATA	
+actg_check_loop  . . . . . . . .	L Near	 00D3	  _TEXT	
+actg_mais  . . . . . . . . . . .	Byte	 01EF	  _DATA	
+actg_option  . . . . . . . . . .	L Near	 00C7	  _TEXT	
+actg_valid . . . . . . . . . . .	Byte	 01F0	  _DATA	
+actg . . . . . . . . . . . . . .	Byte	 01EA	  _DATA	
+atoi_1 . . . . . . . . . . . . .	L Near	 016D	  _TEXT	
+atoi_2 . . . . . . . . . . . . .	L Near	 0157	  _TEXT	
+char_is_valid  . . . . . . . . .	L Near	 00EC	  _TEXT	
+cmdline  . . . . . . . . . . . .	Byte	 0100	  _DATA	
+defaultOutputFile  . . . . . . .	Byte	 01E3	  _DATA	
+end_n_option . . . . . . . . . .	L Near	 00C0	  _TEXT	
+errorCommandLineMsg  . . . . . .	Byte	 01F6	  _DATA	
+f_option_loop  . . . . . . . . .	L Near	 006D	  _TEXT	
+f_option . . . . . . . . . . . .	L Near	 005E	  _TEXT	
+flagError  . . . . . . . . . . .	Byte	 021C	  _DATA	
+groupSize  . . . . . . . . . . .	Byte	 01E9	  _DATA	
+inputFile  . . . . . . . . . . .	Byte	 017F	  _DATA	
+invalid_option . . . . . . . . .	L Near	 0102	  _TEXT	
+n_option_loop  . . . . . . . . .	L Near	 00A7	  _TEXT	
+n_option . . . . . . . . . . . .	L Near	 009B	  _TEXT	
+next_char  . . . . . . . . . . .	L Near	 00FF	  _TEXT	
+next_option  . . . . . . . . . .	L Near	 003A	  _TEXT	
+no_arguments . . . . . . . . . .	L Near	 0111	  _TEXT	
+o_option_loop  . . . . . . . . .	L Near	 008A	  _TEXT	
+o_option . . . . . . . . . . . .	L Near	 007E	  _TEXT	
+outputFile . . . . . . . . . . .	Byte	 01B1	  _DATA	
+parse_command_line . . . . . . .	L Near	 0029	  _TEXT	
+ps_1 . . . . . . . . . . . . . .	L Near	 014E	  _TEXT	
+search_loop  . . . . . . . . . .	L Near	 00DE	  _TEXT	
+skip_space . . . . . . . . . . .	L Near	 0029	  _TEXT	
+unique_char_loop . . . . . . . .	L Near	 00F1	  _TEXT	
+
+	   0 Warnings
+	   0 Errors

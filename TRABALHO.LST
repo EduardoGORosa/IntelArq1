@@ -1,4 +1,4 @@
-Microsoft (R) Macro Assembler Version 6.11		    09/05/23 14:34:17
+Microsoft (R) Macro Assembler Version 6.11		    09/07/23 03:03:55
 trabalho.asm						     Page 1 - 1
 
 
@@ -6,539 +6,345 @@ trabalho.asm						     Page 1 - 1
 				;
 				;         Eduardo Rosa   00335503
 
-				        .model small
-				        .stack
+				.model small
+				.stack
 
- = 000D				CR					equ		0dh
- = 000A				LF					equ		0ah
- = ".res"			FileHandleSaida		equ		".res"
-
- 0000				        .data
-
- 0000  0100 [			FileName				db		256 dup (?)				; Nome do arquivo a ser lido
+ 0000				.data
+				ORG 80H             
+ 0080 00			CMDCNT DB ?          ;COMMAND LINE COUNT
+ 0081  007F [			CMDSTR DB 127 DUP(?)  ;COMMAND LINE BUFFER
         00
        ]
- 0100  0032 [			FileNameDst				db		50	dup(0)				; Nome do arquivo a ser escrito
-        00
-       ]
- 0132 00			FileBuffer				db		0 						; Buffer de leitura do arquivo
- 0133 0000			FileHandle				dw		0						; Handler do arquivo de leitura
- 0135 0000			FileHandleDst			dw		0						; Handler do arquivo de saida
- 0137  0096 [			FileNameBuffer			db		150 dup (?)
-        00
-       ]
+				;--------------------------------------------
+				; DATA
+				;--------------------------------------------
+ = 000D				CR					      equ		0dh
+ = 000A				LF					      equ		0ah
 
- 01CD 4E 6F 6D 65 20 64		MsgAskFile				db		"Nome do arquivo: ", 0
-       6F 20 61 72 71 75
-       69 76 6F 3A 20 00
- 01DF 45 72 72 6F 20 6E		ErrorOpenFileMsg		db		"Erro na abertura do arquivo.", CR, LF, 0
-       61 20 61 62 65 72
-       74 75 72 61 20 64
-       6F 20 61 72 71 75
-       69 76 6F 2E 0D 0A
-       00
- 01FE 45 72 72 6F 20 6E		ErrorReadFileMsg		db		"Erro na leitura do arquivo.", CR, LF, 0
-       61 20 6C 65 69 74
-       75 72 61 20 64 6F
-       20 61 72 71 75 69
-       76 6F 2E 0D 0A 00
- 021C 45 72 72 6F 20 6E		ErrorCreateFileMsg		db		"Erro na criacao do arquivo", CR, LF, 0
-       61 20 63 72 69 61
-       63 61 6F 20 64 6F
-       20 61 72 71 75 69
-       76 6F 0D 0A 00
- 0239 45 72 72 6F 20 6E		ErrorWriteFileMsg		db		"Erro na escrita do arquivo", CR, LF, 0
-       61 20 65 73 63 72
-       69 74 61 20 64 6F
-       20 61 72 71 75 69
-       76 6F 0D 0A 00
- 0256 45 72 72 6F 20 6E		ErrorCommandLineMsg		db		"Erro na escrita da linha de comando", CR, LF, 0
+ 0100  007F [			cmdline              db    127   dup(?)
+        00
+       ]
+ 017F  0032 [			inputFile            db    50    dup(?)        ; Nome do arquivo de entrada
+        00
+       ]
+ 01B1  0032 [			outputFile           db    50    dup(?)        ; Nome padrão do arquivo de saída
+        00
+       ]
+ 01E3 61 2E 6F 75 74 00		defaultOutputFile    db    'a.out', 0       ; Nome padrão do arquivo de saída
+ 01E9  0005 [			groupSize            db    5     dup(?)               ; Tamanho do grupo de bases
+        00
+       ]
+ 01EE  0005 [			nitrogen_bases       db    5     dup(?)
+        00
+       ]
+ 01F3 00			base_a               db    0
+ 01F4 00			base_c               db    0
+ 01F5 00			base_t               db    0
+ 01F6 00			base_g               db    0
+ 01F7 00			base_plus            db    0
+ 01F8 61 63 74 67 2B 00		base_valid           db    "actg+", 0
+ 01FE 45 72 72 6F 20 6E		errorCommandLineMsg	db		"Erro na escrita da linha de comando", CR, LF, 0
        61 20 65 73 63 72
        69 74 61 20 64 61
        20 6C 69 6E 68 61
        20 64 65 20 63 6F
        6D 61 6E 64 6F 0D
        0A 00
- 027C 0D 0A 00			MsgCRLF					db		CR, LF, 0
+ 0224 00			flagError				db		0
+ 0225 0D 0A 00			MsgCRLF					db		CR, LF, 0
+				;--------------------------------------------
+				;SCAN INPUT PARAMETER LINE
 
- 027F 43 6F 75 6E 74 20		MsgCountA				db		"Count of 'A': ", 0
-       6F 66 20 27 41 27
-       3A 20 00
- 028E 43 6F 75 6E 74 20		MsgCountC				db		"Count of 'C': ", 0
-       6F 66 20 27 43 27
-       3A 20 00
- 029D 43 6F 75 6E 74 20		MsgCountT				db		"Count of 'T': ", 0
-       6F 66 20 27 54 27
-       3A 20 00
- 02AC 43 6F 75 6E 74 20		MsgCountG				db		"Count of 'G': ", 0
-       6F 66 20 27 47 27
-       3A 20 00
+ 0000				.code
+				.startup
+ 0017  BE 0081			   mov      si, 81h
+ 001A  B5 00			   mov      ch,0
+ 001C  26: 8A 0E 0080		   mov      cl,es:[80h]      ;PARAMETER COUNT by variable CMDCNT
+ 0021  83 F9 00			   cmp      cx,0
+ 0024  75 03			   jnz      parse_command_line          ;YES - PROCESS COMMAND LINE PARAMETERS
+ 0026  E9 012F			   jmp      no_arguments           ;NO - PARAMETERS
+				   
+ 0029				parse_command_line:   
+ 0029				   skip_space:
+ 0029  26: 8A 04		      mov   al, es:[si]
+ 002C  3C 20			      cmp   al, ' '
+ 002E  74 0A			      je    next_option
+ 0030  3C 0D			      cmp   al, CR
+ 0032  75 03 E9 0121		      je    no_arguments
+ 0037  46			      inc   si
+ 0038  EB EF			      jmp   skip_space
+				   
+ 003A				   next_option:
+ 003A  46			      inc   si
+ 003B  26: 8A 04		      mov   al, es:[si]
 
- 02BB 00			SomaCol1			db		0
- 02BC 00			SomaCol2			db		0
- 02BD 00			SomaCol3			db		0
- 02BE 00			SomaCol4			db 		0
- 02BF 00			Contador			db		0
- 02C0 0000			Contador2			dw		0
- 02C2 0000			TotalBytes			dw 		0
-				;TODO		Fazer TotalBytes2 funcionar
- 02C4 00			TotalBytes2			db		0	
- 02C5 0030 0031 0032 0033	VetorHexa			dw		"0","1","2","3","4","5","6","7","8","9","A","B","C","D","E","F"
-       0034 0035 0036
-       0037 0038 0039
-       0041 0042 0043
-       0044 0045 0046
- 02E5 00			FlagError				db		0
- 02E6  0014 [			BufferWRWORD			db		20 dup (?)
-        00
-       ]
- 02FA 0000			sw_n					dw		0
- 02FC 00			sw_f					db		0
- 02FD 0000			sw_m					dw		0
- 02FF 00			BufferChar				db		0
- 0300 00			BufferPutChar				db		0
-
- 0301 00			A_Count     			db 		0
- 0302 00			C_Count     			db 		0
- 0303 00			T_Count     			db 		0
- 0304 00			G_Count     			db 		0
- 0305  0006 [			A_CountStr	db		6 dup (?)   ; Buffer para o contador de 'A' em formato de string
-        00
-       ]
- 030B  0006 [			C_CountStr	db		6 dup (?)   ; Buffer para o contador de 'C' em formato de string
-        00
-       ]
- 0311  0006 [			T_CountStr	db		6 dup (?)   ; Buffer para o contador de 'T' em formato de string
-        00
-       ]
- 0317  0006 [			G_CountStr	db		6 dup (?)   ; Buffer para o contador de 'G' em formato de string
-        00
-       ]
-
- 031D  03E8 [			commandLine db 1000 dup(?)   ; Buffer para armazenar a linha de comando
-        00
-       ]
- 0705  0032 [			inputFile db 50 dup(?)     ; Nome do arquivo de entrada
-        00
-       ]
- 0737 61 2E 6F 75 74 00		outputFile db 'a.out',0       ; Nome padrão do arquivo de saída
- 073D 0000			groupSize dw 0               ; Tamanho do grupo de bases
- 073F  03E8 [			options db 1000 dup(?)      ; Opções da linha de comando
-        00
-       ]
- 0B27 0000			argc dw 0                    ; Contagem de argumentos da linha de comando
- 0B29 0000			argv dw 0                    ; Ponteiro para argumentos da linha de comando
-
- 0000				        .code
-				        .startup
-
- 0017  B4 62					mov ah,62h
- 0019  CD 21					int 21h
-						mov si, offset bx:80H
-trabalho.asm(74): error A2096: segment, group, or segment register expected
- 001B  8A 04					mov al, [si]
-
-						
- 001D  E9 00FD					jmp Final
- 002B				LoopReadFile:
- 002B  8B 1E 0133 R		    mov bx, FileHandle
- 002F  E8 01D2			    call getChar
- 0032  72 47			    jc  ErrorReadFile
- 0034  83 F8 00			    cmp ax, 0
- 0037  74 6C			    jz  CloseAndFinal
- 0039  88 16 02FF R		    mov BufferChar, dl
- 003D  8A C2			    mov al, dl
-				    ;call putChar
- 003F  E8 0165				call printf_c
-				    ; Check for 'A', 'C', 'T', 'G' and update counters
- 0042  3C 41			    cmp al, 'A'
- 0044  74 0E			    je  IncrementA
- 0046  3C 43			    cmp al, 'C'
- 0048  74 10			    je  IncrementC
- 004A  3C 54			    cmp al, 'T'
- 004C  74 12			    je  IncrementT
- 004E  3C 47			    cmp al, 'G'
- 0050  74 14			    je  IncrementG
- 0052  EB D7			    jmp LoopReadFile
-
- 0054				IncrementA:
- 0054  FE 06 0301 R		    inc A_Count
- 0058  EB D1			    jmp LoopReadFile
-
- 005A				IncrementC:
- 005A  FE 06 0302 R		    inc C_Count
- 005E  EB CB			    jmp LoopReadFile
-
- 0060				IncrementT:
- 0060  FE 06 0303 R		    inc T_Count
- 0064  EB C5			    jmp LoopReadFile
-
- 0066				IncrementG:
- 0066  FE 06 0304 R		    inc G_Count
- 006A  EB BF				jmp LoopReadFile
-
- 006C				ErrorOpenFile:
- 006C  8D 1E 01DF R				lea		bx,ErrorOpenFileMsg
- 0070  E8 0123					call	printf_s
- 0073  C6 06 02E5 R 01				mov		FlagError,1
- 0078  E9 00A2					jmp		Final
-
- 007B				ErrorReadFile:
- 007B  8D 1E 01FE R				lea		bx, ErrorReadFileMsg
- 007F  E8 0114					call	printf_s
- 0082  C6 06 02E5 R 01				mov		FlagError, 1
- 0087  EB 1C					jmp		CloseAndFinal
-
- 0089				ErrorCreateFile:
- 0089  8D 1E 021C R				lea		bx, ErrorCreateFileMsg
- 008D  E8 0106					call	printf_s
- 0090  C6 06 02E5 R 01				mov		FlagError, 1
- 0095  EB 0E					jmp		CloseAndFinal
-
- 0097				ErrorWriteFile:
- 0097  8D 1E 0239 R				lea 	bx, ErrorWriteFileMsg
- 009B  E8 00F8					call	printf_s
- 009E  C6 06 02E5 R 01				mov		FlagError, 1
- 00A3  EB 00					jmp		CloseAndFinal
-
- 00A5				CloseAndFinal:
-
-				    ; Display counts of 'A', 'C', 'T', 'G'
-				    ; Após incrementar cada contador (IncrementA, IncrementC, IncrementT, IncrementG), converta o valor para string
-
-					; convert A to string
- 00A5  A0 0301 R			mov al, A_Count
- 00A8  BB 0305 R			mov bx, offset A_CountStr
- 00AB  E8 00FE				call sprintf_w
-
-					; convert C to string
- 00AE  A0 0302 R			mov al, C_Count
- 00B1  BB 030B R			mov bx, offset C_CountStr
- 00B4  E8 00F5				call sprintf_w
-
-					; convert T to string
- 00B7  A0 0303 R			mov al, T_Count
- 00BA  BB 0311 R			mov bx, offset T_CountStr
- 00BD  E8 00EC				call sprintf_w
-
-					; convert G to string
- 00C0  A0 0304 R			mov al, G_Count
- 00C3  BB 0317 R			mov bx, offset G_CountStr
- 00C6  E8 00E3				call sprintf_w
-
-					; Breakline
- 00C9  8D 1E 027C R			lea		bx,MsgCRLF
- 00CD  E8 00C6				call	printf_s
-
-					; Print A message and A counter
- 00D0  8D 1E 027F R			lea bx, MsgCountA
- 00D4  E8 00BF				call printf_s
- 00D7  8D 1E 0305 R			lea bx, A_CountStr
- 00DB  E8 00B8				call printf_s
-
-					; Breakline
- 00DE  8D 1E 027C R			lea		bx,MsgCRLF
- 00E2  E8 00B1				call	printf_s
-
-					; Print C message and C counter
- 00E5  8D 1E 028E R			lea bx, MsgCountC
- 00E9  E8 00AA				call printf_s
- 00EC  8D 1E 030B R			lea bx, C_CountStr
- 00F0  E8 00A3				call printf_s
-
-					; Breakline
- 00F3  8D 1E 027C R			lea		bx,MsgCRLF
- 00F7  E8 009C				call	printf_s
-
-					; Print T message and T counter
- 00FA  8D 1E 029D R			lea bx, MsgCountT
- 00FE  E8 0095				call printf_s
- 0101  8D 1E 0311 R			lea bx, T_CountStr
- 0105  E8 008E				call printf_s
-
-					; Breakline
- 0108  8D 1E 027C R			lea		bx,MsgCRLF
- 010C  E8 0087				call	printf_s
-
-					; Print G message and G counter
- 010F  8D 1E 02AC R			lea bx, MsgCountG
- 0113  E8 0080				call printf_s
- 0116  8D 1E 0317 R			lea bx, G_CountStr
- 011A  E8 0079				call printf_s
- 011D				Final:
-						.exit
-
-				;
-				;--------------------------------------------------------------------
-				;Funcao: Parse command line
-				;--------------------------------------------------------------------
- 0121				parse_command_line proc near
- 0121  BE 031D R		    mov si, offset commandLine
- 0124  8B 04			    mov ax, [si]  ; Inicialmente, al aponta para o primeiro caractere da linha de comando
-
-				    ; Pule o nome do programa
- 0126				    find_space:
- 0126  46			        inc si
- 0127  8B 04			        mov ax, [si]
- 0129  83 F8 20			        cmp ax, ' '
- 012C  75 F8			        jne find_space
- 012E  8B DE			        mov bx, si
- 0130  E8 0079			        call sprintf_w
- 0133  8B D0			        mov dx, ax
- 0135  E8 006F			        call printf_c
-
- 0138				    next_option:
- 0138  46			        inc si
- 0139  8B 04			        mov ax, [si]
-
-				        ; Verificar se encontramos uma opção válida
- 013B  83 F8 2D			        cmp ax, '-'
- 013E  75 1C			        jne invalid_option
+				      ; Verificar se encontramos uma opção válida
+ 003E  3C 2D			      cmp   al, '-'
+ 0040  74 03 E9 0104		      jne   invalid_option
 
 						; Move string pointer
- 0140  46					inc si
- 0141  8B 04					mov ax, [si]
-				        ; mov dl, al
-				        ; call printf_c
+ 0045  46					inc   si
+ 0046  26: 8A 04				mov   al, es:[si]
+ 0049  3C 0D			      cmp   al, CR
+ 004B  75 03 E9 00F9		      je    invalid_option
+ 0050  3C 66					cmp   al, 'f'
+ 0052  74 0A			      je    f_option
+ 0054  3C 6F					cmp   al, 'o'
+ 0056  74 26			      je    o_option
+ 0058  3C 6E					cmp   al, 'n'
+ 005A  74 42			      je    n_option
+ 005C  EB 75			      jmp   base_option
 
- 0143  83 F8 66					cmp ax, 'f'
- 0146  74 0C			        je f_option
- 0148  83 F8 6F					cmp ax, 'o'
- 014B  74 09			        je o_option
- 014D  83 F8 6E					cmp ax, 'n'
- 0150  74 06			        je n_option
- 0152  EB 06			        jmp actg_option
+ 005E				   f_option:
+ 005E  8D 3E 017F R		      lea   di, inputFile
+ 0062  46			      inc   si
+ 0063  26: 8A 04		      mov   al, es:[si]
+ 0066  3C 20			      cmp   al, ' '
+ 0068  74 03 E9 00DC		      jne   invalid_option
+ 006D				      f_option_loop:
+ 006D  46			         inc   si
+ 006E  26: 8A 04		         mov   al, es:[si]
+ 0071  3C 20			         cmp   al, ' '
+ 0073  74 B4			         je    skip_space
+ 0075  3C 0D			         cmp   al, CR
+ 0077  74 B0			         je    skip_space
+ 0079  88 05			         mov   [di], al
+ 007B  47			         inc   di
+ 007C  EB EF			         jmp   f_option_loop 
 
- 0154					f_option:
+ 007E					o_option:
+ 007E  8D 3E 01B1 R		      lea   di, outputFile
+ 0082  46			      inc   si
+ 0083  26: 8A 04		      mov   al, es:[si]
+ 0086  3C 20			      cmp   al, ' '
+ 0088  74 03 E9 00BC		      jne   invalid_option
+ 008D				      o_option_loop:
+ 008D  46			         inc   si
+ 008E  26: 8A 04		         mov   al, es:[si]
+ 0091  3C 20			         cmp   al, ' '
+ 0093  74 94			         je    skip_space
+ 0095  3C 0D			         cmp   al, CR
+ 0097  74 90			         je    skip_space
+ 0099  88 05			         mov   [di], al
+ 009B  47			         inc   di
+ 009C  EB EF			         jmp   o_option_loop 
 
- 0154  EB D0					jmp find_space
+ 009E					n_option:
+ 009E  8D 3E 01E9 R		      lea   di, groupSize
+ 00A2  46			      inc   si
+ 00A3  26: 8A 04		      mov   al, es:[si]
+ 00A6  3C 20			      cmp   al, ' '
+ 00A8  74 03 E9 009C		      jne   invalid_option
+ 00AD				      n_option_loop:
+ 00AD  46			         inc   si
+ 00AE  26: 8A 04		         mov   al, es:[si]
+ 00B1  3C 20			         cmp   al, ' '
+ 00B3  74 17			         je    end_n_option
+ 00B5  3C 0D			         cmp   al, CR
+ 00B7  74 13			         je    end_n_option
+ 00B9  3C 39			         cmp   al, 39h
+ 00BB  7E 03 E9 0089		         jg    invalid_option
+ 00C0  3C 30			         cmp   al, 30h
+ 00C2  7D 03 E9 0082		         jl    invalid_option
+ 00C7  88 05			         mov   [di], al
+ 00C9  47			         inc   di
+ 00CA  EB E1			         jmp   n_option_loop
+ 00CC				      end_n_option:
+ 00CC  C7 05 0000		         mov   [di], 0
+ 00D0  E9 FF56			         jmp   skip_space
 
- 0156					o_option:
+ 00D3					base_option:
+ 00D3  8D 3E 01F8 R		      lea   di, base_valid    ; di = base_valid initial adress
+ 00D7  8D 1E 01EE R		      lea   bx, nitrogen_bases
+ 00DB  3C 20			      cmp   al, ' '           ; if space invalid
+ 00DD  74 6A			      je    invalid_option
+ 00DF  3C 0D			      cmp   al, CR            ; if cr invalid
+ 00E1  74 66			      je    invalid_option
+ 00E3				   base_check_loop:
+ 00E3  26: 8A 04		      mov   al, es:[si]       ; al = cmdline char
+ 00E6  3C 20			      cmp   al, ' '           ; if space base_cmd ended
+ 00E8  74 50			      je    done_parsing_base
+ 00EA  3C 0D			      cmp   al, CR            ; if cr base_cmd ended
+ 00EC  74 4C			      je    done_parsing_base             
+ 00EE				   search_loop:
+ 00EE  3A 05			      cmp   al, [di]       ; if cmdline char == base_valid initial address
+ 00F0  74 0A			      je    char_is_valid     ; char_is_valid()
+ 00F2  47			      inc   di                ; base_address++
+ 00F3  8A 0D			      mov   cl, [di]                ; base_address++
+ 00F5  80 F9 00			      cmp   cl, 0             ; if base_address == 0
+ 00F8  75 F4			      jne   search_loop       ; search_loop()
+ 00FA  EB 40			      jmp   invalid_base_option
+				      
+ 00FC				   char_is_valid:
+ 00FC  3C 61			      cmp   al, 'a'           ; if cmdline char == 'a'
+ 00FE  74 12			      je    put_a             ; base_a = True
+ 0100  3C 63			      cmp   al, 'c'           ; if cmdline char == 'c'
+ 0102  74 16			      je    put_c             ; base_c = True
+ 0104  3C 74			      cmp   al, 't'           ; if cmdline char == 't'
+ 0106  74 1A			      je    put_t             ; base_t = True
+ 0108  3C 67			      cmp   al, 'g'           ; if cmdline char == 'g'
+ 010A  74 1E			      je    put_g             ; base_g = True
+ 010C  3C 2B			      cmp   al, '+'           ; if cmdline char == '+'
+ 010E  74 22			      je    put_plus          ; base_plus = True
+ 0110  EB D1			      jmp   base_check_loop
 
- 0156  EB CE					jmp find_space
+ 0112				      put_a: 
+ 0112  C7 07 0061		         mov   [bx], 'a'
+ 0116  43			         inc   bx
+ 0117  46			         inc   si
+ 0118  EB C9			         jmp   base_check_loop   
+ 011A				      put_c: 
+ 011A  C7 07 0063		         mov   [bx], 'c'
+ 011E  43			         inc   bx
+ 011F  46			         inc   si
+ 0120  EB C1			         jmp   base_check_loop   
+ 0122				      put_t: 
+ 0122  C7 07 0074		         mov   [bx], 't'
+ 0126  43			         inc   bx
+ 0127  46			         inc   si
+ 0128  EB B9			         jmp   base_check_loop   
+ 012A				      put_g: 
+ 012A  C7 07 0067		         mov   [bx], 'g'
+ 012E  43			         inc   bx
+ 012F  46			         inc   si
+ 0130  EB B1			         jmp   base_check_loop   
+ 0132				      put_plus: 
+ 0132  C7 07 002B		         mov   [bx], '+'
+ 0136  43			         inc   bx
+ 0137  46			         inc   si
+ 0138  EB A9			         jmp   base_check_loop      
 
- 0158					n_option:
+ 013A				    done_parsing_base:
+ 013A  EB 1C			         jmp   no_arguments                                                     
 
- 0158  EB CC					jmp find_space
+ 013C				   invalid_base_option:
+ 013C  B9 0005			      mov cx, 5                 ; Set the loop counter to the number of elements
+ 013F  8D 36 01EE R		      lea si, nitrogen_bases    ; Set edi to point to the start of the array
 
- 015A					actg_option:
+ 0143				      invalid_base_loop:
+ 0143  C6 04 00			         mov byte ptr [si], 0          ; Zero out the current element
+ 0146  46			         inc si                    ; Move to the next element
+ 0147  E2 FA			         loop invalid_base_loop
 
- 015A  EB 0C			        jmp done_parsing
+ 0149				   invalid_option:
+ 0149  8D 1E 01FE R		      lea   bx,errorCommandLineMsg
+ 014D  E8 0043			      call  printf_s
+ 0150  C6 06 0224 R 01		      mov	flagError,1
+ 0155  E9 FED1			      jmp   skip_space
+				   
+ 0158  90			no_arguments:  NOP
 
- 015C				    invalid_option:
- 015C  8D 1E 0256 R		        lea		bx,ErrorCommandLineMsg
- 0160  E8 0033					call	printf_s
- 0163  C6 06 02E5 R 01				mov		FlagError,1
+ 0159  8D 1E 017F R		      lea   bx,inputFile
+ 015D  E8 0033			      call  printf_s
 
- 0168				    done_parsing:
- 0168  C3			        ret
+ 0160  8D 1E 0225 R		      lea   bx,MsgCRLF
+ 0164  E8 002C			      call  printf_s
 
- 0169				parse_command_line endp
+ 0167  8D 1E 01B1 R		      lea   bx,outputFile
+ 016B  E8 0025			      call  printf_s
 
-				;
-				;--------------------------------------------------------------------
-				;Funcao: Le o nome do arquivo do teclado
-				;--------------------------------------------------------------------
- 0169				GetFileName	proc	near
- 0169  8D 1E 01CD R				lea		bx,MsgAskFile			; Coloca mensagem que pede o nome do arquivo
- 016D  E8 0026					call	printf_s
+ 016E  8D 1E 0225 R		      lea   bx,MsgCRLF
+ 0172  E8 001E			      call  printf_s
 
- 0170  B4 0A					mov		ah,0ah						; Le uma linha do teclado
- 0172  8D 16 0137 R				lea		dx,FileNameBuffer
- 0176  C6 06 0137 R 64				mov		byte ptr FileNameBuffer,100
- 017B  CD 21					int		21h
+ 0175  8D 1E 01E9 R		      lea   bx,groupSize
+ 0179  E8 002D			      call  atoi
+ 017C  8B D8			      mov   bx,ax
+ 017E  E8 0012			      call  printf_s
 
- 017D  8D 36 0139 R				lea		si,FileNameBuffer+2			; Copia do buffer de teclado para o FileName
- 0181  8D 3E 0000 R				lea		di,FileName
- 0185  8A 0E 0138 R				mov		cl,FileNameBuffer+1
- 0189  B5 00					mov		ch,0
- 018B  8C D8					mov		ax,ds						; Ajusta ES=DS para poder usar o MOVSB
- 018D  8E C0					mov		es,ax
- 018F  F3/ A4					rep 	movsb
+ 0181  8D 1E 0225 R		      lea   bx,MsgCRLF
+ 0185  E8 000B			      call  printf_s
 
- 0191  26: C6 05 00				mov		byte ptr es:[di],0			; Coloca marca de fim de string
- 0195  C3					ret
- 0196				GetFileName	endp
+ 0188  8D 1E 01EE R		      lea   bx,nitrogen_bases
+ 018C  E8 0004			      call  printf_s
 
+				.exit
 				;
 				;--------------------------------------------------------------------
 				;Função Escrever um string na tela
 				;		printf_s(char *s -> BX)
 				;--------------------------------------------------------------------
- 0196				printf_s	proc	near
- 0196  8A 17				mov		dl,[bx]
- 0198  80 FA 00				cmp		dl,0
- 019B  74 09				je		ps_1
+ 0193				printf_s	proc	near
+ 0193  8A 17				mov		dl,[bx]
+ 0195  80 FA 00				cmp		dl,0
+ 0198  74 09				je		   ps_1
 
- 019D  53				push	bx
- 019E  B4 02				mov		ah,2
- 01A0  CD 21				int		21H
- 01A2  5B				pop		bx
+ 019A  53				push	   bx
+ 019B  B4 02				mov		ah,2
+ 019D  CD 21				int		21H
+ 019F  5B				pop		bx
 
- 01A3  43				inc		bx		
- 01A4  EB F0				jmp		printf_s
+ 01A0  43				inc		bx		
+ 01A1  EB F0				jmp		printf_s
 						
- 01A6				ps_1:
- 01A6  C3				ret
- 01A7				printf_s	endp
+ 01A3				ps_1:
+ 01A3  C3				ret
+ 01A4				printf_s	endp
 
 				;
 				;--------------------------------------------------------------------
 				;Função Escrever um char na tela
 				;		Entra: DL -> Char a ser escrito
 				;--------------------------------------------------------------------
- 01A7				printf_c	proc	near
- 01A7  B4 02					mov		ah, 2
- 01A9  CD 21					int		21H
- 01AB  C3					ret
- 01AC				printf_c	endp
+ 01A4				printf_c	proc	near
+ 01A4  B4 02					mov		ah, 2
+ 01A6  CD 21					int		21H
+ 01A8  C3					ret
+ 01A9				printf_c	endp
 
 				;
 				;--------------------------------------------------------------------
-				;Função: Converte um inteiro (n) para (string)
-				;		 sprintf(string->BX, "%d", n->AX)
+				;Função:Converte um ASCII-DECIMAL para HEXA
+				;Entra: (S) -> DS:BX -> Ponteiro para o string de origem
+				;Sai:	(A) -> AX -> Valor "Hex" resultante
+				;Algoritmo:
+				;	A = 0;
+				;	while (*S!='\0') {
+				;		A = 10 * A + (*S - '0')
+				;		++S;
+				;	}
+				;	return
 				;--------------------------------------------------------------------
- 01AC				sprintf_w	proc	near
- 01AC  A3 02FA R			mov		sw_n,ax
- 01AF  B9 0005				mov		cx,5
- 01B2  C7 06 02FD R 2710		mov		sw_m,10000
- 01B8  C6 06 02FC R 00			mov		sw_f,0
-					
- 01BD				sw_do:
- 01BD  BA 0000				mov		dx,0
- 01C0  A1 02FA R			mov		ax,sw_n
- 01C3  F7 36 02FD R			div		sw_m
-					
- 01C7  3C 00				cmp		al,0
- 01C9  75 07				jne		sw_store
- 01CB  80 3E 02FC R 00			cmp		sw_f,0
- 01D0  74 0A				je		sw_continue
- 01D2				sw_store:
- 01D2  04 30				add		al,'0'
- 01D4  88 07				mov		[bx],al
- 01D6  43				inc		bx
-					
- 01D7  C6 06 02FC R 01			mov		sw_f,1
- 01DC				sw_continue:
-					
- 01DC  89 16 02FA R			mov		sw_n,dx
-					
- 01E0  BA 0000				mov		dx,0
- 01E3  A1 02FD R			mov		ax,sw_m
- 01E6  BD 000A				mov		bp,10
- 01E9  F7 F5				div		bp
- 01EB  A3 02FD R			mov		sw_m,ax
-					
- 01EE  49				dec		cx
- 01EF  83 F9 00				cmp		cx,0
- 01F2  75 C9				jnz		sw_do
+ 01A9				atoi	proc near
 
- 01F4  80 3E 02FC R 00			cmp		sw_f,0
- 01F9  75 05				jnz		sw_continua2
- 01FB  C7 07 0030			mov		[bx],'0'
- 01FF  43				inc		bx
- 0200				sw_continua2:
+						; A = 0;
+ 01A9  B8 0000					mov		ax,0
+						
+ 01AC				atoi_2:
+						; while (*S!='\0') {
+ 01AC  80 3F 00					cmp		byte ptr[bx], 0
+ 01AF  74 11					jz		   atoi_1
 
- 0200  C6 07 00				mov		byte ptr[bx],0
- 0203  C3				ret		
- 0204				sprintf_w	endp
+						; 	A = 10 * A
+ 01B1  B9 000A					mov		cx,10
+ 01B4  F7 E1					mul		cx
 
-				;
-				;--------------------------------------------------------------------
-				;Função	Le um caractere do arquivo identificado pelo HANLDE BX
-				;		getChar(handle->BX)
-				;Entra: BX -> file handle
-				;Sai:   dl -> caractere
-				;		AX -> numero de caracteres lidos
-				;		CF -> "0" se leitura ok
-				;--------------------------------------------------------------------
- 0204				getChar	proc	near
- 0204  B4 3F				mov		ah,3fh
- 0206  B9 0001				mov		cx,1
- 0209  8D 16 0132 R			lea		dx,FileBuffer
- 020D  CD 21				int		21h
- 020F  8A 16 0132 R			mov		dl,FileBuffer
- 0213  C3				ret
- 0214				getChar	endp
+						; 	A = A + *S
+ 01B6  B5 00					mov		ch,0
+ 01B8  8A 0F					mov		cl,[bx]
+ 01BA  03 C1					add		ax,cx
 
-				;
-				;--------------------------------------------------------------------
-				;Função	Abre o arquivo cujo nome está no string apontado por DX
-				;		boolean fopen(char *FileName -> DX)
-				;Entra: DX -> ponteiro para o string com o nome do arquivo
-				;Sai:   AX -> handle do arquivo
-				;       CF -> 0, se OK
-				;--------------------------------------------------------------------
- 0214				fopen	proc	near
- 0214  B0 00				mov		al,0
- 0216  B4 3D				mov		ah,3dh
- 0218  CD 21				int		21h
- 021A  C3				ret
- 021B				fopen	endp
+						; 	A = A - '0'
+ 01BC  83 E8 30					sub		ax,'0'
 
-				;
-				;--------------------------------------------------------------------
-				;Função Cria o arquivo cujo nome está no string apontado por DX
-				;		boolean fcreate(char *FileName -> DX)
-				;Sai:   AX -> handle do arquivo
-				;       CF -> 0, se OK
-				;--------------------------------------------------------------------
- 021B				fcreate	proc	near
- 021B  B9 0000				mov		cx,0
- 021E  B4 3C				mov		ah,3ch
- 0220  CD 21				int		21h
- 0222  C3				ret
- 0223				fcreate	endp
+						; 	++S
+ 01BF  43					inc		bx
+						
+						;}
+ 01C0  EB EA					jmp		atoi_2
 
-				;
-				;--------------------------------------------------------------------
-				;Entra:	BX -> file handle
-				;Sai:	CF -> "0" se OK
-				;--------------------------------------------------------------------
- 0223				fclose	proc	near
- 0223  B4 3E				mov		ah,3eh
- 0225  CD 21				int		21h
- 0227  C3				ret
- 0228				fclose	endp
+ 01C2				atoi_1:
+						; return
+ 01C2  C3					ret
 
-				;
-				;--------------------------------------------------------------------
-				;Função pra pegar o nome do arquivo saida
-				;--------------------------------------------------------------------
- 0228				pegaNome	proc	near
- 0228					LoopPegaNome:
- 0228  8D 1E 0000 R				lea		bx, FileName
- 022C  8B 0E 02C0 R				mov		cx,	Contador2
- 0230  03 D9					add		bx, cx
- 0232  8A 07					mov		al, [bx]
- 0234  3C 00					cmp		al, 0
- 0236  74 16					je		FimPegaNome
- 0238  3C 2E					cmp		al,	2eh
- 023A  74 12					je		FimPegaNome
- 023C  8D 1E 0100 R				lea		bx, FileNameDst
- 0240  8B 0E 02C0 R				mov		cx,	Contador2
- 0244  03 D9					add		bx, cx
- 0246  88 07					mov		[bx], al
- 0248  FF 06 02C0 R				inc		Contador2
- 024C  EB DA					jmp		LoopPegaNome
+ 01C3				atoi	endp
 
- 024E					FimPegaNome:
- 024E  8D 1E 0100 R				lea		bx, FileNameDst
- 0252  8B 0E 02C0 R				mov		cx,	Contador2
- 0256  03 D9					add		bx,	cx
- 0258  C7 07 002E				mov		[bx], 2eh
- 025C  43					inc		bx
- 025D  C7 07 0052				mov		[bx], 52h
- 0261  43					inc		bx
- 0262  C7 07 0065				mov		[bx], 65h
- 0266  43					inc		bx
- 0267  C7 07 0073				mov		[bx], 73h
- 026B  C3					ret
- 026C				pegaNome	endp
 				;--------------------------------------------------------------------
 						end
 				;--------------------------------------------------------------------
-Microsoft (R) Macro Assembler Version 6.11		    09/05/23 14:34:17
+
+
+				end
+Microsoft (R) Macro Assembler Version 6.11		    09/07/23 03:03:55
 trabalho.asm						     Symbols 2 - 1
 
 
@@ -549,25 +355,18 @@ Segments and Groups:
                 N a m e                 Size     Length   Align   Combine Class
 
 DGROUP . . . . . . . . . . . . .	GROUP
-_DATA  . . . . . . . . . . . . .	16 Bit	 0B2B	  Word	  Public  'DATA'	
+_DATA  . . . . . . . . . . . . .	16 Bit	 0228	  Word	  Public  'DATA'	
 STACK  . . . . . . . . . . . . .	16 Bit	 0400	  Para	  Stack	  'STACK'	 
-_TEXT  . . . . . . . . . . . . .	16 Bit	 026C	  Word	  Public  'CODE'	
+_TEXT  . . . . . . . . . . . . .	16 Bit	 01C3	  Word	  Public  'CODE'	
 
 
 Procedures,  parameters and locals:
 
                 N a m e                 Type     Value    Attr
 
-GetFileName  . . . . . . . . . .	P Near	 0169	  _TEXT	Length= 002D Private
-fclose . . . . . . . . . . . . .	P Near	 0223	  _TEXT	Length= 0005 Private
-fcreate  . . . . . . . . . . . .	P Near	 021B	  _TEXT	Length= 0008 Private
-fopen  . . . . . . . . . . . . .	P Near	 0214	  _TEXT	Length= 0007 Private
-getChar  . . . . . . . . . . . .	P Near	 0204	  _TEXT	Length= 0010 Private
-parse_command_line . . . . . . .	P Near	 0121	  _TEXT	Length= 0048 Private
-pegaNome . . . . . . . . . . . .	P Near	 0228	  _TEXT	Length= 0044 Private
-printf_c . . . . . . . . . . . .	P Near	 01A7	  _TEXT	Length= 0005 Private
-printf_s . . . . . . . . . . . .	P Near	 0196	  _TEXT	Length= 0011 Private
-sprintf_w  . . . . . . . . . . .	P Near	 01AC	  _TEXT	Length= 0058 Private
+atoi . . . . . . . . . . . . . .	P Near	 01A9	  _TEXT	Length= 001A Private
+printf_c . . . . . . . . . . . .	P Near	 01A4	  _TEXT	Length= 0005 Private
+printf_s . . . . . . . . . . . .	P Near	 0193	  _TEXT	Length= 0011 Private
 
 
 Symbols:
@@ -584,83 +383,52 @@ Symbols:
 @fardata?  . . . . . . . . . . .	Text   	 FAR_BSS
 @fardata . . . . . . . . . . . .	Text   	 FAR_DATA
 @stack . . . . . . . . . . . . .	Text   	 DGROUP
-A_CountStr . . . . . . . . . . .	Byte	 0305	  _DATA	
-A_Count  . . . . . . . . . . . .	Byte	 0301	  _DATA	
-BufferChar . . . . . . . . . . .	Byte	 02FF	  _DATA	
-BufferPutChar  . . . . . . . . .	Byte	 0300	  _DATA	
-BufferWRWORD . . . . . . . . . .	Byte	 02E6	  _DATA	
+CMDCNT . . . . . . . . . . . . .	Byte	 0080	  _DATA	
+CMDSTR . . . . . . . . . . . . .	Byte	 0081	  _DATA	
 CR . . . . . . . . . . . . . . .	Number	 000Dh	 
-C_CountStr . . . . . . . . . . .	Byte	 030B	  _DATA	
-C_Count  . . . . . . . . . . . .	Byte	 0302	  _DATA	
-CloseAndFinal  . . . . . . . . .	L Near	 00A5	  _TEXT	
-Contador2  . . . . . . . . . . .	Word	 02C0	  _DATA	
-Contador . . . . . . . . . . . .	Byte	 02BF	  _DATA	
-ErrorCommandLineMsg  . . . . . .	Byte	 0256	  _DATA	
-ErrorCreateFileMsg . . . . . . .	Byte	 021C	  _DATA	
-ErrorCreateFile  . . . . . . . .	L Near	 0089	  _TEXT	
-ErrorOpenFileMsg . . . . . . . .	Byte	 01DF	  _DATA	
-ErrorOpenFile  . . . . . . . . .	L Near	 006C	  _TEXT	
-ErrorReadFileMsg . . . . . . . .	Byte	 01FE	  _DATA	
-ErrorReadFile  . . . . . . . . .	L Near	 007B	  _TEXT	
-ErrorWriteFileMsg  . . . . . . .	Byte	 0239	  _DATA	
-ErrorWriteFile . . . . . . . . .	L Near	 0097	  _TEXT	
-FileBuffer . . . . . . . . . . .	Byte	 0132	  _DATA	
-FileHandleDst  . . . . . . . . .	Word	 0135	  _DATA	
-FileHandleSaida  . . . . . . . .	Text   	 ".res"
-FileHandle . . . . . . . . . . .	Word	 0133	  _DATA	
-FileNameBuffer . . . . . . . . .	Byte	 0137	  _DATA	
-FileNameDst  . . . . . . . . . .	Byte	 0100	  _DATA	
-FileName . . . . . . . . . . . .	Byte	 0000	  _DATA	
-FimPegaNome  . . . . . . . . . .	L Near	 024E	  _TEXT	
-Final  . . . . . . . . . . . . .	L Near	 011D	  _TEXT	
-FlagError  . . . . . . . . . . .	Byte	 02E5	  _DATA	
-G_CountStr . . . . . . . . . . .	Byte	 0317	  _DATA	
-G_Count  . . . . . . . . . . . .	Byte	 0304	  _DATA	
-IncrementA . . . . . . . . . . .	L Near	 0054	  _TEXT	
-IncrementC . . . . . . . . . . .	L Near	 005A	  _TEXT	
-IncrementG . . . . . . . . . . .	L Near	 0066	  _TEXT	
-IncrementT . . . . . . . . . . .	L Near	 0060	  _TEXT	
 LF . . . . . . . . . . . . . . .	Number	 000Ah	 
-LoopPegaNome . . . . . . . . . .	L Near	 0228	  _TEXT	
-LoopReadFile . . . . . . . . . .	L Near	 002B	  _TEXT	
-MsgAskFile . . . . . . . . . . .	Byte	 01CD	  _DATA	
-MsgCRLF  . . . . . . . . . . . .	Byte	 027C	  _DATA	
-MsgCountA  . . . . . . . . . . .	Byte	 027F	  _DATA	
-MsgCountC  . . . . . . . . . . .	Byte	 028E	  _DATA	
-MsgCountG  . . . . . . . . . . .	Byte	 02AC	  _DATA	
-MsgCountT  . . . . . . . . . . .	Byte	 029D	  _DATA	
-SomaCol1 . . . . . . . . . . . .	Byte	 02BB	  _DATA	
-SomaCol2 . . . . . . . . . . . .	Byte	 02BC	  _DATA	
-SomaCol3 . . . . . . . . . . . .	Byte	 02BD	  _DATA	
-SomaCol4 . . . . . . . . . . . .	Byte	 02BE	  _DATA	
-T_CountStr . . . . . . . . . . .	Byte	 0311	  _DATA	
-T_Count  . . . . . . . . . . . .	Byte	 0303	  _DATA	
-TotalBytes2  . . . . . . . . . .	Byte	 02C4	  _DATA	
-TotalBytes . . . . . . . . . . .	Word	 02C2	  _DATA	
-VetorHexa  . . . . . . . . . . .	Word	 02C5	  _DATA	
-actg_option  . . . . . . . . . .	L Near	 015A	  _TEXT	
-argc . . . . . . . . . . . . . .	Word	 0B27	  _DATA	
-argv . . . . . . . . . . . . . .	Word	 0B29	  _DATA	
-commandLine  . . . . . . . . . .	Byte	 031D	  _DATA	
-done_parsing . . . . . . . . . .	L Near	 0168	  _TEXT	
-f_option . . . . . . . . . . . .	L Near	 0154	  _TEXT	
-find_space . . . . . . . . . . .	L Near	 0126	  _TEXT	
-groupSize  . . . . . . . . . . .	Word	 073D	  _DATA	
-inputFile  . . . . . . . . . . .	Byte	 0705	  _DATA	
-invalid_option . . . . . . . . .	L Near	 015C	  _TEXT	
-n_option . . . . . . . . . . . .	L Near	 0158	  _TEXT	
-next_option  . . . . . . . . . .	L Near	 0138	  _TEXT	
-o_option . . . . . . . . . . . .	L Near	 0156	  _TEXT	
-options  . . . . . . . . . . . .	Byte	 073F	  _DATA	
-outputFile . . . . . . . . . . .	Byte	 0737	  _DATA	
-ps_1 . . . . . . . . . . . . . .	L Near	 01A6	  _TEXT	
-sw_continua2 . . . . . . . . . .	L Near	 0200	  _TEXT	
-sw_continue  . . . . . . . . . .	L Near	 01DC	  _TEXT	
-sw_do  . . . . . . . . . . . . .	L Near	 01BD	  _TEXT	
-sw_f . . . . . . . . . . . . . .	Byte	 02FC	  _DATA	
-sw_m . . . . . . . . . . . . . .	Word	 02FD	  _DATA	
-sw_n . . . . . . . . . . . . . .	Word	 02FA	  _DATA	
-sw_store . . . . . . . . . . . .	L Near	 01D2	  _TEXT	
+MsgCRLF  . . . . . . . . . . . .	Byte	 0225	  _DATA	
+atoi_1 . . . . . . . . . . . . .	L Near	 01C2	  _TEXT	
+atoi_2 . . . . . . . . . . . . .	L Near	 01AC	  _TEXT	
+base_a . . . . . . . . . . . . .	Byte	 01F3	  _DATA	
+base_check_loop  . . . . . . . .	L Near	 00E3	  _TEXT	
+base_c . . . . . . . . . . . . .	Byte	 01F4	  _DATA	
+base_g . . . . . . . . . . . . .	Byte	 01F6	  _DATA	
+base_option  . . . . . . . . . .	L Near	 00D3	  _TEXT	
+base_plus  . . . . . . . . . . .	Byte	 01F7	  _DATA	
+base_t . . . . . . . . . . . . .	Byte	 01F5	  _DATA	
+base_valid . . . . . . . . . . .	Byte	 01F8	  _DATA	
+char_is_valid  . . . . . . . . .	L Near	 00FC	  _TEXT	
+cmdline  . . . . . . . . . . . .	Byte	 0100	  _DATA	
+defaultOutputFile  . . . . . . .	Byte	 01E3	  _DATA	
+done_parsing_base  . . . . . . .	L Near	 013A	  _TEXT	
+end_n_option . . . . . . . . . .	L Near	 00CC	  _TEXT	
+errorCommandLineMsg  . . . . . .	Byte	 01FE	  _DATA	
+f_option_loop  . . . . . . . . .	L Near	 006D	  _TEXT	
+f_option . . . . . . . . . . . .	L Near	 005E	  _TEXT	
+flagError  . . . . . . . . . . .	Byte	 0224	  _DATA	
+groupSize  . . . . . . . . . . .	Byte	 01E9	  _DATA	
+inputFile  . . . . . . . . . . .	Byte	 017F	  _DATA	
+invalid_base_loop  . . . . . . .	L Near	 0143	  _TEXT	
+invalid_base_option  . . . . . .	L Near	 013C	  _TEXT	
+invalid_option . . . . . . . . .	L Near	 0149	  _TEXT	
+n_option_loop  . . . . . . . . .	L Near	 00AD	  _TEXT	
+n_option . . . . . . . . . . . .	L Near	 009E	  _TEXT	
+next_option  . . . . . . . . . .	L Near	 003A	  _TEXT	
+nitrogen_bases . . . . . . . . .	Byte	 01EE	  _DATA	
+no_arguments . . . . . . . . . .	L Near	 0158	  _TEXT	
+o_option_loop  . . . . . . . . .	L Near	 008D	  _TEXT	
+o_option . . . . . . . . . . . .	L Near	 007E	  _TEXT	
+outputFile . . . . . . . . . . .	Byte	 01B1	  _DATA	
+parse_command_line . . . . . . .	L Near	 0029	  _TEXT	
+ps_1 . . . . . . . . . . . . . .	L Near	 01A3	  _TEXT	
+put_a  . . . . . . . . . . . . .	L Near	 0112	  _TEXT	
+put_c  . . . . . . . . . . . . .	L Near	 011A	  _TEXT	
+put_g  . . . . . . . . . . . . .	L Near	 012A	  _TEXT	
+put_plus . . . . . . . . . . . .	L Near	 0132	  _TEXT	
+put_t  . . . . . . . . . . . . .	L Near	 0122	  _TEXT	
+search_loop  . . . . . . . . . .	L Near	 00EE	  _TEXT	
+skip_space . . . . . . . . . . .	L Near	 0029	  _TEXT	
 
 	   0 Warnings
-	   1 Errors
+	   0 Errors
