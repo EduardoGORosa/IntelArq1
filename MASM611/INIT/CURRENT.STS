@@ -1,25 +1,25 @@
 [shared-]
-	pmark="C:\trabalho.asm" 328 1
+	pmark="C:\trabalho.asm" 74 1
 	version=3
 [debug-]
 	target="c:\trabalho.exe"
 	synonym=;C:
 	watch=base_a'CPP
-	genericbp='E "{atoi,trabalho.asm,C:\trabalho.exe} atoi_1"
-	genericbp='E "{,trabalho.asm,C:\trabalho.exe} atoi"
-	genericbp='E "{,trabalho.asm,C:\trabalho.exe} LoopReadFile"
-	genericbp='E "{get_commandline,trabalho.asm,C:\trabalho.exe} base_option"
+	watch=base_c'CPP
+	watch=base_t'CPP
+	watch=base_g'CPP
+	genericbp='E "{,trabalho.asm,C:\trabalho.exe} .224"
 [cv]
 	wndstate=0 80 14 0 1 0 0 0 0 0 0 0 0 0 -1
 	wndstate=1 80 5 0 1 0 0 0 0 0 0 0 0 0 -1
-	wndstate=2 67 4 0 1 0 1 0 0 0 0 0 0 0 -1
-	wndstate=3 67 16 0 1 1 1 0 0 0 327 323 0 0 -1
+	wndstate=2 67 5 0 1 0 1 0 0 0 0 0 0 0 -1
+	wndstate=3 67 13 0 6 1 1 0 0 0 73 70 0 0 -1
 	wndstate=4 67 7 3 8 0 0 0 0 0 0 0 0 0 -1
 	wndstate=5 67 4 0 16 0 0 0 0 0 0 0 0 0 -1
 	wndstate=6 67 4 0 15 0 0 0 0 0 0 0 0 0 -1
 	wndstate=7 13 23 67 1 0 1 0 0 0 0 0 0 0 -1
 	wndstate=8 67 4 0 16 0 0 0 0 0 0 0 0 0 -1
-	wndstate=9 67 7 0 17 0 1 0 1 0 9 5 0 0 -1
+	wndstate=9 67 5 0 19 0 1 0 1 0 1 0 0 0 -1
 	command=use auto
 	command=n10
 	screensize=25
