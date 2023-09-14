@@ -18,9 +18,10 @@ input_file            db    50    dup(?)        ; Nome do arquivo de entrada
 output_file           db    50    dup(?)        ; Nome padrão do arquivo de saída
 default_output_file   db    'a.out', 0       ; Nome padrão do arquivo de saída
 nitrogen_bases        db    5     dup(?)
-s_nitrogen_bases      db    5     dup(?)
+s_nitrogen_bases      db    6     dup(?)
 file_size             dw    0
 file_size_str         db    5     dup(?)
+base_lines            dw    0
 base_a                dw    0
 base_c                dw    0
 base_t                dw    0
@@ -29,8 +30,9 @@ base_plus             db    0
 position              dw    0
 position_str          dw    5     dup(?)
 cur_position          dw    0
+cur_position_str      dw    5    dup(?)
 base_valid            db    "actg+", 0
-error_command_line  db   "Erro na linha de comando", CR, LF, 0
+error_command_line    db   "Erro na linha de comando", CR, LF, 0
 error_command_line_f  db   "Erro no argumento f", CR, LF, 0
 error_command_line_o  db   "Erro no argumento o", CR, LF, 0
 error_command_line_n  db   "Erro no argumento n", CR, LF, 0
@@ -48,16 +50,14 @@ error_open_file_msg   db    "Erro na abertura do arquivo.", CR, LF, 0
 error_read_file_msg   db    "Erro na leitura do arquivo.", CR, LF, 0
 error_create_file_msg db   "Erro na criacao do arquivo", CR, LF, 0
 error_write_file_msg  db    "Erro na escrita do arquivo", CR, LF, 0
+error_unknown_char_msg db    "Erro caractere indevido na leitura do arquivo", CR, LF, 0
+loading               db    "Carregando",0
 file_handle           dw    0                      ; Handler do arquivo de leitura
 file_handle_dst       dw    0                      ; Handler do arquivo de saida
 file_buffer           db    0                      ; Buffer de leitura do arquivo
 sw_n                  dw    0
 sw_f                  db    0
 sw_m                  dw    0
-msg_base_a            db    "Count of 'A': ", 0
-msg_base_c            db    "Count of 'C': ", 0
-msg_base_t            db    "Count of 'T': ", 0
-msg_base_g            db    "Count of 'G': ", 0
 base_a_str            db    6 dup (?)   ; Buffer para o contador de 'A' em formato de string
 base_c_str            db    6 dup (?)   ; Buffer para o contador de 'C' em formato de string
 base_t_str            db    6 dup (?)   ; Buffer para o contador de 'T' em formato de string
@@ -87,13 +87,13 @@ group_size            db    0
    jc       error_open_file      ; If (CF == 1), erro ao abrir o arquivo
    mov      file_handle, ax      ; Salva handle do arquivo
 
-   lea bx, msg_input_file
-   call printf_s
-   lea bx, input_file
-   call printf_s
+   lea      bx, msg_input_file
+   call     printf_s
+   lea      bx, input_file
+   call     printf_s
 
-   lea bx, msg_crlf
-   call printf_s
+   lea      bx, msg_crlf
+   call     printf_s
 
    lea      bx, file_handle
    call     calculate_file_size
@@ -113,10 +113,10 @@ default_file:
    jc       error_create_file
    mov      file_handle_dst, ax      ; Salva handle do arquivo
    lea      bx, file_handle_dst
-   lea bx, msg_output_file
-   call printf_s
-   lea bx, default_output_file
-   call printf_s
+   lea      bx, msg_output_file
+   call     printf_s
+   lea      bx, default_output_file
+   call     printf_s
    lea      bx, msg_crlf
    call     printf_s
    jmp      loop_read_file
@@ -127,10 +127,10 @@ cmd_output_file:
    jc       error_create_file
    lea      bx, file_handle_dst
    mov      file_handle_dst, ax      ; Salva handle do arquivo
-   lea bx, msg_output_file
-   call printf_s
-   lea bx, output_file
-   call printf_s
+   lea      bx, msg_output_file
+   call     printf_s
+   lea      bx, output_file
+   call     printf_s
    lea      bx, msg_crlf
    call     printf_s
    jmp      loop_read_file
@@ -210,6 +210,8 @@ loop_read_file:
       mov   dl, 'G'
       call  set_char
    start_count:   
+      lea     bx, loading
+      call    printf_s
       lea     bx, file_size
       mov     cx, [bx]
       lea     bx, group_size
@@ -217,12 +219,15 @@ loop_read_file:
       jl      file_less_than_group
       mov     position, cx
       dec     cur_position
+      inc     position
    count_bases:
       inc     cur_position
       mov     bx, file_handle_dst
       mov     cx, cur_position
       cmp     cx, position
       je      close_and_final
+      mov     dl, 2eh
+      call    printf_c
       mov     dl, CR
       call    set_char
       mov     dl, LF
@@ -237,15 +242,31 @@ loop_read_file:
       push    cx
       mov     bx, file_handle
       mov     ah, 42h
-      mov     bx, file_handle
+      sub     cx, cx
+      mov     dx, cur_position ; CX:DX=+7
+      mov     al, 0h  ; from beginning
+      int     21h
+      call    get_char
+      cmp     dl, 0ah
+      je      cr_case
+      mov     ah, 42h
       sub     cx, cx
       mov     dx, cur_position ; CX:DX=+7
       mov     al, 0h  ; from beginning
       int     21h
       pop     cx
+      jmp     count_bases_loop
+
+      cr_case:
+         pop     cx
+         inc     position
+         inc     cur_position
+         inc     base_lines
+
       count_bases_loop:
          cmp     cx, 0
          je      set_count_bases
+
          push    cx
          call    get_char
          jc      error_read_file
@@ -261,38 +282,39 @@ loop_read_file:
          je      increment_t
          cmp     al, 'G'
          je      increment_g
-         jmp     error_unknown_char
+         cmp     al, 0ah
+         je      else_count_bases_loop
          
          increment_a:
             pop     cx
             inc     base_a
             dec     cx
-            push    cx
             jmp     count_bases_loop
 
          increment_c:
             pop     cx
             inc     base_c
             dec     cx
-            push    cx
             jmp     count_bases_loop
 
          increment_t:
             pop     cx
             inc     base_t
             dec     cx
-            push    cx
             jmp     count_bases_loop
 
          increment_g:
             pop     cx
             inc     base_g
             dec     cx
-            push    cx
+            jmp     count_bases_loop
+         
+         else_count_bases_loop:
+            pop     cx
             jmp     count_bases_loop
 
          error_unknown_char:
-            lea   bx, error_write_file_msg
+            lea   bx, error_unknown_char_msg
             call  printf_s
             mov   flag_error, 1
             jmp   close_and_final
@@ -444,34 +466,35 @@ error_write_file:
 
 close_and_final:
 
-    ; Display counts of 'A', 'C', 'T', 'G'
-    ; Após incrementar cada contador (increment_a, increment_c, increment_t, increment_g), converta o valor para string
-   
-   lea bx, msg_group_size
-   call printf_s
-   lea bx, group_size_str
-   call printf_s
-   lea bx, msg_crlf
-   call printf_s
-   lea bx, msg_information
-   call printf_s
-   lea bx, s_nitrogen_bases
-   call printf_s
-   lea bx, msg_crlf
-   call printf_s
-   lea bx, msg_bases_size_input
-   call printf_s
-   lea bx, file_size_str
-   call printf_s
-   lea bx, msg_crlf  
-   call printf_s
-   lea bx, msg_group_count
-   call printf_s
-   lea bx, position_str
-   mov      ax, position
-   call     sprintf_w
-   lea bx,position_str
-   call printf_s
+   ; Display counts of 'A', 'C', 'T', 'G'
+   ; Após incrementar cada contador (increment_a, increment_c, increment_t, increment_g), converta o valor para string
+   lea   bx, msg_group_size
+   call  printf_s
+   lea   bx, group_size_str
+   call  printf_s
+   lea   bx, msg_crlf
+   call  printf_s
+   lea   bx, msg_information
+   call  printf_s
+   lea   bx, s_nitrogen_bases
+   call  printf_s
+   lea   bx, msg_crlf
+   call  printf_s
+   lea   bx, msg_bases_size_input
+   call  printf_s
+   lea   bx, file_size_str
+   call  printf_s
+   lea   bx, msg_crlf  
+   call  printf_s
+   lea   bx, msg_group_count
+   call  printf_s
+   mov   ax, position
+   lea   bx, base_lines
+   sub   ax, [bx]
+   lea   bx, position_str
+   call  sprintf_w
+   lea   bx,position_str
+   call  printf_s
 
    jmp   final
 
@@ -547,6 +570,7 @@ get_char proc near
    mov   cx, 1
    lea   dx, file_buffer
    int   21h
+   jc    error_read_file
    mov   dl, file_buffer
    ret
 get_char endp
@@ -952,7 +976,22 @@ cfs_read_loop:
    jc    error_read_file
    cmp   ax, 0
    jz    end_of_file
+   cmp   dl, 'A'
+   je    inc_file_size
+   cmp   dl, 'G'
+   je    inc_file_size
+   cmp   dl, 'C'
+   je    inc_file_size
+   cmp   dl, 'T'
+   je    inc_file_size
+   cmp   dl, CR
+   je    loop_file_size
+   cmp   dl, LF
+   je    loop_file_size
+   jmp   error_unknown_char
+   inc_file_size:
    inc   file_size
+   loop_file_size:
    jmp   cfs_read_loop
 
 end_of_file:

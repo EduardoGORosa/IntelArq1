@@ -1,25 +1,24 @@
 [shared-]
-	pmark="C:\trabalho.asm" 74 1
+	pmark="C:\trabalho.asm" 491 1
 	version=3
 [debug-]
 	target="c:\trabalho.exe"
 	synonym=;C:
-	watch=base_a'CPP
-	watch=base_c'CPP
-	watch=base_t'CPP
-	watch=base_g'CPP
-	genericbp='E "{,trabalho.asm,C:\trabalho.exe} .224"
+	watch=position'CPP
+	watch=cur_position'CPP
+	genericbp='E "{,trabalho.asm,C:\trabalho.exe} final"
+	genericbp='E "{,trabalho.asm,C:\trabalho.exe} .487"
 [cv]
 	wndstate=0 80 14 0 1 0 0 0 0 0 0 0 0 0 -1
 	wndstate=1 80 5 0 1 0 0 0 0 0 0 0 0 0 -1
 	wndstate=2 67 5 0 1 0 1 0 0 0 0 0 0 0 -1
-	wndstate=3 67 13 0 6 1 1 0 0 0 73 70 0 0 -1
+	wndstate=3 67 13 0 6 1 1 0 0 0 490 483 0 0 -1
 	wndstate=4 67 7 3 8 0 0 0 0 0 0 0 0 0 -1
 	wndstate=5 67 4 0 16 0 0 0 0 0 0 0 0 0 -1
 	wndstate=6 67 4 0 15 0 0 0 0 0 0 0 0 0 -1
 	wndstate=7 13 23 67 1 0 1 0 0 0 0 0 0 0 -1
 	wndstate=8 67 4 0 16 0 0 0 0 0 0 0 0 0 -1
-	wndstate=9 67 5 0 19 0 1 0 1 0 1 0 0 0 -1
+	wndstate=9 67 5 0 19 0 1 0 1 0 3 1 0 0 -1
 	command=use auto
 	command=n10
 	screensize=25
