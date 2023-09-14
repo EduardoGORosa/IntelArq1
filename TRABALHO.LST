@@ -1,4 +1,4 @@
-Microsoft (R) Macro Assembler Version 6.11		    09/13/23 24:53:08
+Microsoft (R) Macro Assembler Version 6.11		    09/14/23 11:47:59
 trabalho.asm						     Page 1 - 1
 
 
@@ -197,436 +197,447 @@ trabalho.asm						     Page 1 - 1
  0017  BE 0081			   mov      si, 81h
  001A  B5 00			   mov      ch,0
  001C  26: 8A 0E 0080		   mov      cl,es:[80h]      ; PARAMETER COUNT by variable CMDCNT
- 0021  E8 04CB			   call     get_commandline
+ 0021  E8 04DB			   call     get_commandline
 
  0024  8D 1E 029B R		   lea      bx, msg_crlf
- 0028  E8 0484			   call     printf_s
+ 0028  E8 0494			   call     printf_s
 
- 002B  E8 0606			   call     sort_nitrogen_bases
+ 002B  E8 0616			   call     sort_nitrogen_bases
 
 				   ; Abre o arquivo
  002E  8D 16 017F R		   lea      dx, input_file
- 0032  E8 045C			   call     fopen
- 0035  73 03 E9 0342		   jc       error_open_file      ; If (CF == 1), erro ao abrir o arquivo
+ 0032  E8 046C			   call     fopen
+ 0035  73 03 E9 0301		   jc       error_open_file      ; If (CF == 1), erro ao abrir o arquivo
  003A  A3 0479 R		   mov      file_handle, ax      ; Salva handle do arquivo
 
- 003D  8D 1E 029E R		   lea      bx, msg_input_file
- 0041  E8 046B			   call     printf_s
- 0044  8D 1E 017F R		   lea      bx, input_file
- 0048  E8 0464			   call     printf_s
+ 003D  8D 1E 0479 R		   lea      bx, file_handle
+ 0041  E8 067C			   call     calculate_file_size
 
- 004B  8D 1E 029B R		   lea      bx, msg_crlf
- 004F  E8 045D			   call     printf_s
+ 0044  A1 01F4 R		   mov      ax, file_size
+ 0047  8D 1E 01F6 R		   lea      bx, file_size_str
+ 004B  E8 03E6			   call     sprintf_w
 
- 0052  8D 1E 0479 R		   lea      bx, file_handle
- 0056  E8 0657			   call     calculate_file_size
+ 004E  8D 1E 01B1 R		   lea      bx, output_file
+ 0052  83 3F 00			   cmp      [bx], 0
+ 0055  75 15			   jne       cmd_output_file
 
- 0059  A1 01F4 R		   mov      ax, file_size
- 005C  8D 1E 01F6 R		   lea      bx, file_size_str
- 0060  E8 03C1			   call     sprintf_w
+ 0057				default_file:
+ 0057  8D 16 01E3 R		   lea      dx, default_output_file
+ 005B  E8 0454			   call     fcreate
+ 005E  73 03 E9 02F5		   jc       error_create_file
+ 0063  A3 047B R		   mov      file_handle_dst, ax      ; Salva handle do arquivo
+ 0066  8D 1E 047B R		   lea      bx, file_handle_dst
+ 006A  EB 15			   jmp      loop_read_file
 
- 0063  8D 1E 01B1 R		   lea      bx, output_file
- 0067  83 3F 00			   cmp      [bx], 0
- 006A  74 02			   je       default_file
- 006C  EB 2A			   jmp      cmd_output_file
+ 006C				cmd_output_file:
+ 006C  8D 16 01B1 R		   lea      dx, output_file
+ 0070  E8 043F			   call     fcreate
+ 0073  73 03 E9 02E0		   jc       error_create_file
+ 0078  8D 1E 047B R		   lea      bx, file_handle_dst
+ 007C  A3 047B R		   mov      file_handle_dst, ax      ; Salva handle do arquivo
+ 007F  EB 00			   jmp      loop_read_file
 
- 006E				default_file:
- 006E  8D 16 01E3 R		   lea      dx, default_output_file
- 0072  E8 042D			   call     fcreate
- 0075  73 03 E9 031F		   jc       error_create_file
- 007A  A3 047B R		   mov      file_handle_dst, ax      ; Salva handle do arquivo
- 007D  8D 1E 047B R		   lea      bx, file_handle_dst
- 0081  8D 1E 02BC R		   lea      bx, msg_output_file
- 0085  E8 0427			   call     printf_s
- 0088  8D 1E 01E3 R		   lea      bx, default_output_file
- 008C  E8 0420			   call     printf_s
- 008F  8D 1E 029B R		   lea      bx, msg_crlf
- 0093  E8 0419			   call     printf_s
- 0096  EB 2A			   jmp      loop_read_file
+ 0081				loop_read_file:
+ 0081  8D 36 01EE R		      lea   si, s_nitrogen_bases
+ 0085				   set_header_bases:
+ 0085  80 3C 00			      cmp   byte ptr [si], 0
+ 0088  75 03 E9 009A		      je    start_count 
+ 008D  80 3C 61			      cmp   byte ptr [si], 'a'
+ 0090  74 16			      je    set_header_a
+ 0092  80 3C 63			      cmp   byte ptr [si], 'c'
+ 0095  74 27			      je    set_header_c
+ 0097  80 3C 74			      cmp   byte ptr [si], 't'
+ 009A  74 38			      je    set_header_t
+ 009C  80 3C 67			      cmp   byte ptr [si], 'g'
+ 009F  74 49			      je    set_header_g
+ 00A1  80 3C 2B			      cmp   byte ptr [si], '+'
+ 00A4  74 5A			      je    set_header_plus
+ 00A6  EB 7F			      jmp   start_count
 
- 0098				cmd_output_file:
- 0098  8D 16 01B1 R		   lea      dx, output_file
- 009C  E8 0403			   call     fcreate
- 009F  73 03 E9 02F5		   jc       error_create_file
- 00A4  8D 1E 047B R		   lea      bx, file_handle_dst
- 00A8  A3 047B R		   mov      file_handle_dst, ax      ; Salva handle do arquivo
- 00AB  8D 1E 02BC R		   lea      bx, msg_output_file
- 00AF  E8 03FD			   call     printf_s
- 00B2  8D 1E 01B1 R		   lea      bx, output_file
- 00B6  E8 03F6			   call     printf_s
- 00B9  8D 1E 029B R		   lea      bx, msg_crlf
- 00BD  E8 03EF			   call     printf_s
- 00C0  EB 00			   jmp      loop_read_file
+ 00A8				   set_header_a:
+ 00A8  B2 41			      mov   dl, 'A'
+ 00AA  8B 1E 047B R		      mov   bx, file_handle_dst
+ 00AE  E8 0424			      call  set_char
+ 00B1  46			      inc   si
+ 00B2  80 3C 00			      cmp   byte ptr [si], 0
+ 00B5  74 70			      je    start_count
+ 00B7  B2 3B			      mov   dl, 3bh
+ 00B9  E8 0419			      call  set_char
+ 00BC  EB C7			      jmp   set_header_bases
+ 00BE				   set_header_c:
+ 00BE  B2 43			      mov   dl, 'C'
+ 00C0  8B 1E 047B R		      mov   bx, file_handle_dst
+ 00C4  E8 040E			      call  set_char
+ 00C7  46			      inc   si
+ 00C8  80 3C 00			      cmp   byte ptr [si], 0
+ 00CB  74 5A			      je    start_count
+ 00CD  B2 3B			      mov   dl, 3bh
+ 00CF  E8 0403			      call  set_char
+ 00D2  EB B1			      jmp   set_header_bases
+ 00D4				   set_header_t:
+ 00D4  B2 54			      mov   dl, 'T'
+ 00D6  8B 1E 047B R		      mov   bx, file_handle_dst
+ 00DA  E8 03F8			      call  set_char
+ 00DD  46			      inc   si
+ 00DE  80 3C 00			      cmp   byte ptr [si], 0
+ 00E1  74 44			      je    start_count
+ 00E3  B2 3B			      mov   dl, 3bh
+ 00E5  E8 03ED			      call  set_char
+ 00E8  EB 9B			      jmp   set_header_bases
+ 00EA				   set_header_g:
+ 00EA  B2 47			      mov   dl, 'G'
+ 00EC  8B 1E 047B R		      mov   bx, file_handle_dst
+ 00F0  E8 03E2			      call  set_char
+ 00F3  46			      inc   si
+ 00F4  80 3C 00			      cmp   byte ptr [si], 0
+ 00F7  74 2E			      je    start_count
+ 00F9  B2 3B			      mov   dl, 3bh
+ 00FB  E8 03D7			      call  set_char
+ 00FE  EB 85			      jmp   set_header_bases
 
- 00C2				loop_read_file:
- 00C2  8D 36 01EE R		      lea   si, s_nitrogen_bases
- 00C6				   set_header_bases:
- 00C6  80 3C 00			      cmp   byte ptr [si], 0
- 00C9  75 03 E9 009A		      je    start_count 
- 00CE  80 3C 61			      cmp   byte ptr [si], 'a'
- 00D1  74 16			      je    set_header_a
- 00D3  80 3C 63			      cmp   byte ptr [si], 'c'
- 00D6  74 27			      je    set_header_c
- 00D8  80 3C 74			      cmp   byte ptr [si], 't'
- 00DB  74 38			      je    set_header_t
- 00DD  80 3C 67			      cmp   byte ptr [si], 'g'
- 00E0  74 49			      je    set_header_g
- 00E2  80 3C 2B			      cmp   byte ptr [si], '+'
- 00E5  74 5A			      je    set_header_plus
- 00E7  EB 7F			      jmp   start_count
+ 0100				   set_header_plus:
+ 0100  B2 41			      mov   dl, 'A'
+ 0102  8B 1E 047B R		      mov   bx, file_handle_dst
+ 0106  E8 03CC			      call  set_char
+ 0109  B2 2B			      mov   dl, 2bh
+ 010B  E8 03C7			      call  set_char
+ 010E  B2 54			      mov   dl, 'T'
+ 0110  E8 03C2			      call  set_char
+ 0113  B2 3B			      mov   dl, 3bh
+ 0115  E8 03BD			      call  set_char
+ 0118  B2 43			      mov   dl, 'C'
+ 011A  E8 03B8			      call  set_char
+ 011D  B2 2B			      mov   dl, 2bh
+ 011F  E8 03B3			      call  set_char
+ 0122  B2 47			      mov   dl, 'G'
+ 0124  E8 03AE			      call  set_char
+ 0127				   start_count:   
+ 0127  8D 1E 046E R		      lea     bx, loading
+ 012B  E8 0391			      call    printf_s
+ 012E  8D 1E 01F4 R		      lea     bx, file_size
+ 0132  8B 0F			      mov     cx, [bx]
+ 0134  8D 1E 04AC R		      lea     bx, group_size
+ 0138  2B 0F			      sub     cx, [bx]
+ 013A  7D 03 E9 02E5		      jl      file_less_than_group
+ 013F  89 0E 0206 R		      mov     position, cx
+ 0143  FF 0E 0212 R		      dec     cur_position
+ 0147  FF 06 0206 R		      inc     position
+ 014B				   count_bases:
+ 014B  FF 06 0212 R		      inc     cur_position
+ 014F  8B 1E 047B R		      mov     bx, file_handle_dst
+ 0153  8B 0E 0212 R		      mov     cx, cur_position
+ 0157  3B 0E 0206 R		      cmp     cx, position
+ 015B  75 03 E9 0214		      je      close_and_final
+ 0160  B2 2E			      mov     dl, 2eh
+ 0162  E8 036B			      call    printf_c
+ 0165  B2 0D			      mov     dl, CR
+ 0167  E8 036B			      call    set_char
+ 016A  B2 0A			      mov     dl, LF
+ 016C  E8 0366			      call    set_char
+ 016F  8D 36 01EE R		      lea     si, s_nitrogen_bases
+ 0173  C7 06 01FD R 0000	      mov     base_a, 0
+ 0179  C7 06 01FF R 0000	      mov     base_c, 0
+ 017F  C7 06 0201 R 0000	      mov     base_t, 0
+ 0185  C7 06 0203 R 0000	      mov     base_g, 0
+ 018B  8D 1E 04AC R		      lea     bx, group_size
+ 018F  8B 0F			      mov     cx, [bx]
+ 0191  51			      push    cx
+ 0192  8B 1E 0479 R		      mov     bx, file_handle
+ 0196  B4 42			      mov     ah, 42h
+ 0198  2B C9			      sub     cx, cx
+ 019A  8B 16 0212 R		      mov     dx, cur_position ; CX:DX=+7
+ 019E  B0 00			      mov     al, 0h  ; from beginning
+ 01A0  CD 21			      int     21h
+ 01A2  E8 02E7			      call    get_char
+ 01A5  80 FA 0A			      cmp     dl, 0ah
+ 01A8  74 0F			      je      cr_case
+ 01AA  B4 42			      mov     ah, 42h
+ 01AC  2B C9			      sub     cx, cx
+ 01AE  8B 16 0212 R		      mov     dx, cur_position ; CX:DX=+7
+ 01B2  B0 00			      mov     al, 0h  ; from beginning
+ 01B4  CD 21			      int     21h
+ 01B6  59			      pop     cx
+ 01B7  EB 0D			      jmp     count_bases_loop
 
- 00E9				   set_header_a:
- 00E9  B2 41			      mov   dl, 'A'
- 00EB  8B 1E 047B R		      mov   bx, file_handle_dst
- 00EF  E8 03D3			      call  set_char
- 00F2  46			      inc   si
- 00F3  80 3C 00			      cmp   byte ptr [si], 0
- 00F6  74 70			      je    start_count
- 00F8  B2 3B			      mov   dl, 3bh
- 00FA  E8 03C8			      call  set_char
- 00FD  EB C7			      jmp   set_header_bases
- 00FF				   set_header_c:
- 00FF  B2 43			      mov   dl, 'C'
- 0101  8B 1E 047B R		      mov   bx, file_handle_dst
- 0105  E8 03BD			      call  set_char
- 0108  46			      inc   si
- 0109  80 3C 00			      cmp   byte ptr [si], 0
- 010C  74 5A			      je    start_count
- 010E  B2 3B			      mov   dl, 3bh
- 0110  E8 03B2			      call  set_char
- 0113  EB B1			      jmp   set_header_bases
- 0115				   set_header_t:
- 0115  B2 54			      mov   dl, 'T'
- 0117  8B 1E 047B R		      mov   bx, file_handle_dst
- 011B  E8 03A7			      call  set_char
- 011E  46			      inc   si
- 011F  80 3C 00			      cmp   byte ptr [si], 0
- 0122  74 44			      je    start_count
- 0124  B2 3B			      mov   dl, 3bh
- 0126  E8 039C			      call  set_char
- 0129  EB 9B			      jmp   set_header_bases
- 012B				   set_header_g:
- 012B  B2 47			      mov   dl, 'G'
- 012D  8B 1E 047B R		      mov   bx, file_handle_dst
- 0131  E8 0391			      call  set_char
- 0134  46			      inc   si
- 0135  80 3C 00			      cmp   byte ptr [si], 0
- 0138  74 2E			      je    start_count
- 013A  B2 3B			      mov   dl, 3bh
- 013C  E8 0386			      call  set_char
- 013F  EB 85			      jmp   set_header_bases
+ 01B9				      cr_case:
+ 01B9  59			         pop     cx
+ 01BA  FF 06 0206 R		         inc     position
+ 01BE  FF 06 0212 R		         inc     cur_position
+ 01C2  FF 06 01FB R		         inc     base_lines
 
- 0141				   set_header_plus:
- 0141  B2 41			      mov   dl, 'A'
- 0143  8B 1E 047B R		      mov   bx, file_handle_dst
- 0147  E8 037B			      call  set_char
- 014A  B2 2B			      mov   dl, 2bh
- 014C  E8 0376			      call  set_char
- 014F  B2 54			      mov   dl, 'T'
- 0151  E8 0371			      call  set_char
- 0154  B2 3B			      mov   dl, 3bh
- 0156  E8 036C			      call  set_char
- 0159  B2 43			      mov   dl, 'C'
- 015B  E8 0367			      call  set_char
- 015E  B2 2B			      mov   dl, 2bh
- 0160  E8 0362			      call  set_char
- 0163  B2 47			      mov   dl, 'G'
- 0165  E8 035D			      call  set_char
- 0168				   start_count:   
- 0168  8D 1E 046E R		      lea     bx, loading
- 016C  E8 0340			      call    printf_s
- 016F  8D 1E 01F4 R		      lea     bx, file_size
- 0173  8B 0F			      mov     cx, [bx]
- 0175  8D 1E 04AC R		      lea     bx, group_size
- 0179  2B 0F			      sub     cx, [bx]
- 017B  7D 03 E9 0294		      jl      file_less_than_group
- 0180  89 0E 0206 R		      mov     position, cx
- 0184  FF 0E 0212 R		      dec     cur_position
- 0188  FF 06 0206 R		      inc     position
- 018C				   count_bases:
- 018C  FF 06 0212 R		      inc     cur_position
- 0190  8B 1E 047B R		      mov     bx, file_handle_dst
- 0194  8B 0E 0212 R		      mov     cx, cur_position
- 0198  3B 0E 0206 R		      cmp     cx, position
- 019C  75 03 E9 0214		      je      close_and_final
- 01A1  B2 2E			      mov     dl, 2eh
- 01A3  E8 031A			      call    printf_c
- 01A6  B2 0D			      mov     dl, CR
- 01A8  E8 031A			      call    set_char
- 01AB  B2 0A			      mov     dl, LF
- 01AD  E8 0315			      call    set_char
- 01B0  8D 36 01EE R		      lea     si, s_nitrogen_bases
- 01B4  C7 06 01FD R 0000	      mov     base_a, 0
- 01BA  C7 06 01FF R 0000	      mov     base_c, 0
- 01C0  C7 06 0201 R 0000	      mov     base_t, 0
- 01C6  C7 06 0203 R 0000	      mov     base_g, 0
- 01CC  8D 1E 04AC R		      lea     bx, group_size
- 01D0  8B 0F			      mov     cx, [bx]
- 01D2  51			      push    cx
- 01D3  8B 1E 0479 R		      mov     bx, file_handle
- 01D7  B4 42			      mov     ah, 42h
- 01D9  2B C9			      sub     cx, cx
- 01DB  8B 16 0212 R		      mov     dx, cur_position ; CX:DX=+7
- 01DF  B0 00			      mov     al, 0h  ; from beginning
- 01E1  CD 21			      int     21h
- 01E3  E8 0296			      call    get_char
- 01E6  80 FA 0A			      cmp     dl, 0ah
- 01E9  74 0F			      je      cr_case
- 01EB  B4 42			      mov     ah, 42h
- 01ED  2B C9			      sub     cx, cx
- 01EF  8B 16 0212 R		      mov     dx, cur_position ; CX:DX=+7
- 01F3  B0 00			      mov     al, 0h  ; from beginning
- 01F5  CD 21			      int     21h
- 01F7  59			      pop     cx
- 01F8  EB 0D			      jmp     count_bases_loop
+ 01C6				      count_bases_loop:
+ 01C6  83 F9 00			         cmp     cx, 0
+ 01C9  74 59			         je      set_count_bases
 
- 01FA				      cr_case:
- 01FA  59			         pop     cx
- 01FB  FF 06 0206 R		         inc     position
- 01FF  FF 06 0212 R		         inc     cur_position
- 0203  FF 06 01FB R		         inc     base_lines
-
- 0207				      count_bases_loop:
- 0207  83 F9 00			         cmp     cx, 0
- 020A  74 59			         je      set_count_bases
-
- 020C  51			         push    cx
- 020D  E8 026C			         call    get_char
- 0210  73 03 E9 0176		         jc      error_read_file
- 0215  80 FA 00			         cmp     dl, 0
- 0218  75 03 E9 0198		         jz      close_and_final
- 021D  8A C2			         mov     al, dl
+ 01CB  51			         push    cx
+ 01CC  E8 02BD			         call    get_char
+ 01CF  73 03 E9 0176		         jc      error_read_file
+ 01D4  80 FA 00			         cmp     dl, 0
+ 01D7  75 03 E9 0198		         jz      close_and_final
+ 01DC  8A C2			         mov     al, dl
 				         ; Check for 'A', 'C', 'T', 'G' and update counters
- 021F  3C 41			         cmp     al, 'A'
- 0221  74 10			         je      increment_a
- 0223  3C 43			         cmp     al, 'C'
- 0225  74 14			         je      increment_c
- 0227  3C 54			         cmp     al, 'T'
- 0229  74 18			         je      increment_t
- 022B  3C 47			         cmp     al, 'G'
- 022D  74 1C			         je      increment_g
- 022F  3C 0A			         cmp     al, 0ah
- 0231  74 20			         je      else_count_bases_loop
+ 01DE  3C 41			         cmp     al, 'A'
+ 01E0  74 10			         je      increment_a
+ 01E2  3C 43			         cmp     al, 'C'
+ 01E4  74 14			         je      increment_c
+ 01E6  3C 54			         cmp     al, 'T'
+ 01E8  74 18			         je      increment_t
+ 01EA  3C 47			         cmp     al, 'G'
+ 01EC  74 1C			         je      increment_g
+ 01EE  3C 0A			         cmp     al, 0ah
+ 01F0  74 20			         je      else_count_bases_loop
 				         
- 0233				         increment_a:
- 0233  59			            pop     cx
- 0234  FF 06 01FD R		            inc     base_a
- 0238  49			            dec     cx
- 0239  EB CC			            jmp     count_bases_loop
+ 01F2				         increment_a:
+ 01F2  59			            pop     cx
+ 01F3  FF 06 01FD R		            inc     base_a
+ 01F7  49			            dec     cx
+ 01F8  EB CC			            jmp     count_bases_loop
 
- 023B				         increment_c:
- 023B  59			            pop     cx
- 023C  FF 06 01FF R		            inc     base_c
- 0240  49			            dec     cx
- 0241  EB C4			            jmp     count_bases_loop
+ 01FA				         increment_c:
+ 01FA  59			            pop     cx
+ 01FB  FF 06 01FF R		            inc     base_c
+ 01FF  49			            dec     cx
+ 0200  EB C4			            jmp     count_bases_loop
 
- 0243				         increment_t:
- 0243  59			            pop     cx
- 0244  FF 06 0201 R		            inc     base_t
- 0248  49			            dec     cx
- 0249  EB BC			            jmp     count_bases_loop
+ 0202				         increment_t:
+ 0202  59			            pop     cx
+ 0203  FF 06 0201 R		            inc     base_t
+ 0207  49			            dec     cx
+ 0208  EB BC			            jmp     count_bases_loop
 
- 024B				         increment_g:
- 024B  59			            pop     cx
- 024C  FF 06 0203 R		            inc     base_g
- 0250  49			            dec     cx
- 0251  EB B4			            jmp     count_bases_loop
+ 020A				         increment_g:
+ 020A  59			            pop     cx
+ 020B  FF 06 0203 R		            inc     base_g
+ 020F  49			            dec     cx
+ 0210  EB B4			            jmp     count_bases_loop
 				         
- 0253				         else_count_bases_loop:
- 0253  59			            pop     cx
- 0254  EB B1			            jmp     count_bases_loop
+ 0212				         else_count_bases_loop:
+ 0212  59			            pop     cx
+ 0213  EB B1			            jmp     count_bases_loop
 
- 0256				         error_unknown_char:
- 0256  8D 1E 043E R		            lea   bx, error_unknown_char_msg
- 025A  E8 0252			            call  printf_s
- 025D  C6 06 029A R 01		            mov   flag_error, 1
- 0262  E9 0150			            jmp   close_and_final
+ 0215				         error_unknown_char:
+ 0215  8D 1E 043E R		            lea   bx, error_unknown_char_msg
+ 0219  E8 02A3			            call  printf_s
+ 021C  C6 06 029A R 01		            mov   flag_error, 1
+ 0221  E9 0150			            jmp   close_and_final
 
- 0265				         set_count_bases:
- 0265  80 3C 00			            cmp   byte ptr [si], 0
- 0268  75 03 E9 FF1F		            je    count_bases 
- 026D  80 3C 61			            cmp   byte ptr [si], 'a'
- 0270  74 1D			            je    set_count_a
- 0272  80 3C 63			            cmp   byte ptr [si], 'c'
- 0275  74 3F			            je    set_count_c
- 0277  80 3C 74			            cmp   byte ptr [si], 't'
- 027A  74 61			            je    set_count_t
- 027C  80 3C 67			            cmp   byte ptr [si], 'g'
- 027F  75 03 E9 0081		            je    set_count_g
- 0284  80 3C 2B			            cmp   byte ptr [si], '+'
- 0287  75 03 E9 00A1		            je    set_count_plus
- 028C  E9 FEFD			            jmp   count_bases
+ 0224				         set_count_bases:
+ 0224  80 3C 00			            cmp   byte ptr [si], 0
+ 0227  75 03 E9 FF1F		            je    count_bases 
+ 022C  80 3C 61			            cmp   byte ptr [si], 'a'
+ 022F  74 1D			            je    set_count_a
+ 0231  80 3C 63			            cmp   byte ptr [si], 'c'
+ 0234  74 3F			            je    set_count_c
+ 0236  80 3C 74			            cmp   byte ptr [si], 't'
+ 0239  74 61			            je    set_count_t
+ 023B  80 3C 67			            cmp   byte ptr [si], 'g'
+ 023E  75 03 E9 0081		            je    set_count_g
+ 0243  80 3C 2B			            cmp   byte ptr [si], '+'
+ 0246  75 03 E9 00A1		            je    set_count_plus
+ 024B  E9 FEFD			            jmp   count_bases
 				            ; put base_a in its location in file
- 028F				            set_count_a:
- 028F  A1 01FD R		               mov   ax, base_a
- 0292  8D 1E 0483 R		               lea   bx, base_a_str
- 0296  E8 018B			               call  sprintf_w
- 0299  8B 1E 047B R		               mov   bx, file_handle_dst
- 029D  8D 3E 0483 R		               lea   di, base_a_str
- 02A1				               set_count_a_loop:
- 02A1  8A 15			                  mov   dl, [di]
- 02A3  80 FA 00			                  cmp   dl, 0
- 02A6  74 06			                  je    end_set_count_a_loop
- 02A8  E8 021A			                  call  set_char
- 02AB  47			                  inc   di
- 02AC  EB F3			                  jmp   set_count_a_loop
- 02AE				               end_set_count_a_loop:
- 02AE  B2 3B			                  mov   dl, 3bh
- 02B0  E8 0212			                  call  set_char
- 02B3  46			                  inc   si
- 02B4  EB AF			                  jmp   set_count_bases
- 02B6				            set_count_c:
- 02B6  A1 01FF R		               mov   ax, base_c
- 02B9  8D 1E 0489 R		               lea   bx, base_c_str
- 02BD  E8 0164			               call  sprintf_w
- 02C0  8B 1E 047B R		               mov   bx, file_handle_dst
- 02C4  8D 3E 0489 R		               lea   di, base_c_str
- 02C8				               set_count_c_loop:
- 02C8  8A 15			                  mov   dl, [di]
- 02CA  80 FA 00			                  cmp   dl, 0
- 02CD  74 06			                  je    end_set_count_c_loop
- 02CF  E8 01F3			                  call  set_char
- 02D2  47			                  inc   di
- 02D3  EB F3			                  jmp   set_count_c_loop
- 02D5				               end_set_count_c_loop:
- 02D5  B2 3B			                  mov   dl, 3bh
- 02D7  E8 01EB			                  call  set_char
- 02DA  46			                  inc   si
- 02DB  EB 88			                  jmp   set_count_bases
- 02DD				            set_count_t:
- 02DD  A1 0201 R		               mov   ax, base_t
- 02E0  8D 1E 048F R		               lea   bx, base_t_str
- 02E4  E8 013D			               call  sprintf_w
- 02E7  8B 1E 047B R		               mov   bx, file_handle_dst
- 02EB  8D 3E 048F R		               lea   di, base_t_str
- 02EF				               set_count_t_loop:
- 02EF  8A 15			                  mov   dl, [di]
- 02F1  80 FA 00			                  cmp   dl, 0
- 02F4  74 06			                  je    end_set_count_t_loop
- 02F6  E8 01CC			                  call  set_char
- 02F9  47			                  inc   di
- 02FA  EB F3			                  jmp   set_count_t_loop
- 02FC				               end_set_count_t_loop:
- 02FC  B2 3B			                  mov   dl, 3bh
- 02FE  E8 01C4			                  call  set_char
- 0301  46			                  inc   si
- 0302  E9 FF60			                  jmp   set_count_bases
- 0305				            set_count_g:
- 0305  A1 0203 R		               mov   ax, base_g
- 0308  8D 1E 0495 R		               lea   bx, base_g_str
- 030C  E8 0115			               call  sprintf_w
- 030F  8B 1E 047B R		               mov   bx, file_handle_dst
- 0313  8D 3E 0495 R		               lea   di, base_g_str
- 0317				               set_count_g_loop:
- 0317  8A 15			                  mov   dl, [di]
- 0319  80 FA 00			                  cmp   dl, 0
- 031C  74 06			                  je    end_set_count_g_loop
- 031E  E8 01A4			                  call  set_char
- 0321  47			                  inc   di
- 0322  EB F3			                  jmp   set_count_g_loop
- 0324				               end_set_count_g_loop:
- 0324  B2 3B			                  mov   dl, 3bh
- 0326  E8 019C			                  call  set_char
- 0329  46			                  inc   si
- 032A  E9 FF38			                  jmp   set_count_bases
- 032D				            set_count_plus:
- 032D  A1 01FD R		                  mov   ax, base_a
- 0330  03 06 0201 R		                  add   ax, base_t
- 0334  8D 1E 049B R		                  lea   bx, base_at_str
- 0338  E8 00E9			                  call  sprintf_w
- 033B  8B 1E 047B R		                  mov   bx, file_handle_dst
- 033F  8D 3E 049B R		                  lea   di, base_at_str
- 0343				               set_count_at_loop:
- 0343  8A 15			                  mov   dl, [di]
- 0345  80 FA 00			                  cmp   dl, 0
- 0348  74 06			                  je    end_set_count_at_loop
- 034A  E8 0178			                  call  set_char
- 034D  47			                  inc   di
- 034E  EB F3			                  jmp   set_count_at_loop
- 0350				               end_set_count_at_loop:
- 0350  B2 3B			                  mov   dl, 3bh
- 0352  E8 0170			                  call  set_char
- 0355  A1 01FF R		                  mov   ax, base_c
- 0358  03 06 0203 R		                  add   ax, base_g
- 035C  8D 1E 04A1 R		                  lea   bx, base_cg_str
- 0360  E8 00C1			                  call  sprintf_w
- 0363  8B 1E 047B R		                  mov   bx, file_handle_dst
- 0367  8D 3E 04A1 R		                  lea   di, base_cg_str
- 036B				               set_count_cg_loop:
- 036B  8A 15			                  mov   dl, [di]
- 036D  80 FA 00			                  cmp   dl, 0
- 0370  74 06			                  je    end_set_count_plus
- 0372  E8 0150			                  call  set_char
- 0375  47			                  inc   di
- 0376  EB F3			                  jmp   set_count_cg_loop
- 0378				               end_set_count_plus:
- 0378  46			                  inc   si
- 0379  E9 FEE9			                  jmp   set_count_bases
+ 024E				            set_count_a:
+ 024E  A1 01FD R		               mov   ax, base_a
+ 0251  8D 1E 0483 R		               lea   bx, base_a_str
+ 0255  E8 01DC			               call  sprintf_w
+ 0258  8B 1E 047B R		               mov   bx, file_handle_dst
+ 025C  8D 3E 0483 R		               lea   di, base_a_str
+ 0260				               set_count_a_loop:
+ 0260  8A 15			                  mov   dl, [di]
+ 0262  80 FA 00			                  cmp   dl, 0
+ 0265  74 06			                  je    end_set_count_a_loop
+ 0267  E8 026B			                  call  set_char
+ 026A  47			                  inc   di
+ 026B  EB F3			                  jmp   set_count_a_loop
+ 026D				               end_set_count_a_loop:
+ 026D  B2 3B			                  mov   dl, 3bh
+ 026F  E8 0263			                  call  set_char
+ 0272  46			                  inc   si
+ 0273  EB AF			                  jmp   set_count_bases
+ 0275				            set_count_c:
+ 0275  A1 01FF R		               mov   ax, base_c
+ 0278  8D 1E 0489 R		               lea   bx, base_c_str
+ 027C  E8 01B5			               call  sprintf_w
+ 027F  8B 1E 047B R		               mov   bx, file_handle_dst
+ 0283  8D 3E 0489 R		               lea   di, base_c_str
+ 0287				               set_count_c_loop:
+ 0287  8A 15			                  mov   dl, [di]
+ 0289  80 FA 00			                  cmp   dl, 0
+ 028C  74 06			                  je    end_set_count_c_loop
+ 028E  E8 0244			                  call  set_char
+ 0291  47			                  inc   di
+ 0292  EB F3			                  jmp   set_count_c_loop
+ 0294				               end_set_count_c_loop:
+ 0294  B2 3B			                  mov   dl, 3bh
+ 0296  E8 023C			                  call  set_char
+ 0299  46			                  inc   si
+ 029A  EB 88			                  jmp   set_count_bases
+ 029C				            set_count_t:
+ 029C  A1 0201 R		               mov   ax, base_t
+ 029F  8D 1E 048F R		               lea   bx, base_t_str
+ 02A3  E8 018E			               call  sprintf_w
+ 02A6  8B 1E 047B R		               mov   bx, file_handle_dst
+ 02AA  8D 3E 048F R		               lea   di, base_t_str
+ 02AE				               set_count_t_loop:
+ 02AE  8A 15			                  mov   dl, [di]
+ 02B0  80 FA 00			                  cmp   dl, 0
+ 02B3  74 06			                  je    end_set_count_t_loop
+ 02B5  E8 021D			                  call  set_char
+ 02B8  47			                  inc   di
+ 02B9  EB F3			                  jmp   set_count_t_loop
+ 02BB				               end_set_count_t_loop:
+ 02BB  B2 3B			                  mov   dl, 3bh
+ 02BD  E8 0215			                  call  set_char
+ 02C0  46			                  inc   si
+ 02C1  E9 FF60			                  jmp   set_count_bases
+ 02C4				            set_count_g:
+ 02C4  A1 0203 R		               mov   ax, base_g
+ 02C7  8D 1E 0495 R		               lea   bx, base_g_str
+ 02CB  E8 0166			               call  sprintf_w
+ 02CE  8B 1E 047B R		               mov   bx, file_handle_dst
+ 02D2  8D 3E 0495 R		               lea   di, base_g_str
+ 02D6				               set_count_g_loop:
+ 02D6  8A 15			                  mov   dl, [di]
+ 02D8  80 FA 00			                  cmp   dl, 0
+ 02DB  74 06			                  je    end_set_count_g_loop
+ 02DD  E8 01F5			                  call  set_char
+ 02E0  47			                  inc   di
+ 02E1  EB F3			                  jmp   set_count_g_loop
+ 02E3				               end_set_count_g_loop:
+ 02E3  B2 3B			                  mov   dl, 3bh
+ 02E5  E8 01ED			                  call  set_char
+ 02E8  46			                  inc   si
+ 02E9  E9 FF38			                  jmp   set_count_bases
+ 02EC				            set_count_plus:
+ 02EC  A1 01FD R		                  mov   ax, base_a
+ 02EF  03 06 0201 R		                  add   ax, base_t
+ 02F3  8D 1E 049B R		                  lea   bx, base_at_str
+ 02F7  E8 013A			                  call  sprintf_w
+ 02FA  8B 1E 047B R		                  mov   bx, file_handle_dst
+ 02FE  8D 3E 049B R		                  lea   di, base_at_str
+ 0302				               set_count_at_loop:
+ 0302  8A 15			                  mov   dl, [di]
+ 0304  80 FA 00			                  cmp   dl, 0
+ 0307  74 06			                  je    end_set_count_at_loop
+ 0309  E8 01C9			                  call  set_char
+ 030C  47			                  inc   di
+ 030D  EB F3			                  jmp   set_count_at_loop
+ 030F				               end_set_count_at_loop:
+ 030F  B2 3B			                  mov   dl, 3bh
+ 0311  E8 01C1			                  call  set_char
+ 0314  A1 01FF R		                  mov   ax, base_c
+ 0317  03 06 0203 R		                  add   ax, base_g
+ 031B  8D 1E 04A1 R		                  lea   bx, base_cg_str
+ 031F  E8 0112			                  call  sprintf_w
+ 0322  8B 1E 047B R		                  mov   bx, file_handle_dst
+ 0326  8D 3E 04A1 R		                  lea   di, base_cg_str
+ 032A				               set_count_cg_loop:
+ 032A  8A 15			                  mov   dl, [di]
+ 032C  80 FA 00			                  cmp   dl, 0
+ 032F  74 06			                  je    end_set_count_plus
+ 0331  E8 01A1			                  call  set_char
+ 0334  47			                  inc   di
+ 0335  EB F3			                  jmp   set_count_cg_loop
+ 0337				               end_set_count_plus:
+ 0337  46			                  inc   si
+ 0338  E9 FEE9			                  jmp   set_count_bases
 
- 037C				error_open_file:
- 037C  8D 1E 03C7 R		      lea   bx, error_open_file_msg
- 0380  E8 012C			      call  printf_s
- 0383  C6 06 029A R 01		      mov   flag_error, 1
- 0388  E9 0095			      jmp   final
+ 033B				error_open_file:
+ 033B  8D 1E 03C7 R		      lea   bx, error_open_file_msg
+ 033F  E8 017D			      call  printf_s
+ 0342  C6 06 029A R 01		      mov   flag_error, 1
+ 0347  E9 00E6			      jmp   final
 
- 038B				error_read_file:
- 038B  8D 1E 03E6 R		      lea   bx, error_read_file_msg
- 038F  E8 011D			      call  printf_s
- 0392  C6 06 029A R 01		      mov   flag_error, 1
- 0397  EB 1C			      jmp   close_and_final
+ 034A				error_read_file:
+ 034A  8D 1E 03E6 R		      lea   bx, error_read_file_msg
+ 034E  E8 016E			      call  printf_s
+ 0351  C6 06 029A R 01		      mov   flag_error, 1
+ 0356  EB 1C			      jmp   close_and_final
 
- 0399				error_create_file:
- 0399  8D 1E 0404 R		      lea   bx, error_create_file_msg
- 039D  E8 010F			      call  printf_s
- 03A0  C6 06 029A R 01		      mov   flag_error, 1
- 03A5  EB 0E			      jmp   close_and_final
+ 0358				error_create_file:
+ 0358  8D 1E 0404 R		      lea   bx, error_create_file_msg
+ 035C  E8 0160			      call  printf_s
+ 035F  C6 06 029A R 01		      mov   flag_error, 1
+ 0364  EB 0E			      jmp   close_and_final
 
- 03A7				error_write_file:
- 03A7  8D 1E 0421 R		      lea   bx, error_write_file_msg
- 03AB  E8 0101			      call  printf_s
- 03AE  C6 06 029A R 01		      mov   flag_error, 1
- 03B3  EB 00			      jmp   close_and_final
+ 0366				error_write_file:
+ 0366  8D 1E 0421 R		      lea   bx, error_write_file_msg
+ 036A  E8 0152			      call  printf_s
+ 036D  C6 06 029A R 01		      mov   flag_error, 1
+ 0372  EB 00			      jmp   close_and_final
 
- 03B5				close_and_final:
+ 0374				close_and_final:
+ 0374  8D 1E 029B R		   lea      bx, msg_crlf
+ 0378  E8 0144			   call     printf_s
 
-				   ; Display counts of 'A', 'C', 'T', 'G'
-				   ; Após incrementar cada contador (increment_a, increment_c, increment_t, increment_g), converta o valor para string
- 03B5  8D 1E 02D8 R		   lea   bx, msg_group_size
- 03B9  E8 00F3			   call  printf_s
- 03BC  8D 1E 04A7 R		   lea   bx, group_size_str
- 03C0  E8 00EC			   call  printf_s
- 03C3  8D 1E 029B R		   lea   bx, msg_crlf
- 03C7  E8 00E5			   call  printf_s
- 03CA  8D 1E 0309 R		   lea   bx, msg_information
- 03CE  E8 00DE			   call  printf_s
- 03D1  8D 1E 01EE R		   lea   bx, s_nitrogen_bases
- 03D5  E8 00D7			   call  printf_s
- 03D8  8D 1E 029B R		   lea   bx, msg_crlf
- 03DC  E8 00D0			   call  printf_s
- 03DF  8D 1E 033D R		   lea   bx, msg_bases_size_input
- 03E3  E8 00C9			   call  printf_s
- 03E6  8D 1E 01F6 R		   lea   bx, file_size_str
- 03EA  E8 00C2			   call  printf_s
- 03ED  8D 1E 029B R		   lea   bx, msg_crlf  
- 03F1  E8 00BB			   call  printf_s
- 03F4  8D 1E 0365 R		   lea   bx, msg_group_count
- 03F8  E8 00B4			   call  printf_s
- 03FB  A1 0206 R		   mov   ax, position
- 03FE  8D 1E 01FB R		   lea   bx, base_lines
- 0402  2B 07			   sub   ax, [bx]
- 0404  8D 1E 0208 R		   lea   bx, position_str
- 0408  E8 0019			   call  sprintf_w
- 040B  8D 1E 0208 R		   lea   bx,position_str
- 040F  E8 009D			   call  printf_s
+ 037B  8D 1E 029E R		   lea      bx, msg_input_file
+ 037F  E8 013D			   call     printf_s
+ 0382  8D 1E 017F R		   lea      bx, input_file
+ 0386  E8 0136			   call     printf_s
 
- 0412  EB 0C			   jmp   final
+ 0389  8D 1E 029B R		   lea      bx, msg_crlf
+ 038D  E8 012F			   call     printf_s
 
- 0414				   file_less_than_group:
- 0414  8D 1E 0421 R		      lea   bx, error_write_file_msg
- 0418  E8 0094			      call  printf_s
- 041B  C6 06 029A R 01		      mov   flag_error,1
+ 0390  8D 1E 01B1 R		   lea      bx, output_file
+ 0394  83 3F 00			   cmp      [bx], 0
+ 0397  74 17			   je       print_default_outfile
 
- 0420				final:
+ 0399  8D 1E 02BC R		   lea      bx, msg_output_file
+ 039D  E8 011F			   call     printf_s
+ 03A0  8D 1E 01B1 R		   lea      bx, output_file
+ 03A4  E8 0118			   call     printf_s
+ 03A7  8D 1E 029B R		   lea      bx, msg_crlf
+ 03AB  E8 0111			   call     printf_s
+
+ 03AE  EB 15			   jmp      close_and_final2
+
+ 03B0				print_default_outfile:
+
+ 03B0  8D 1E 02BC R		   lea      bx, msg_output_file
+ 03B4  E8 0108			   call     printf_s
+ 03B7  8D 1E 01E3 R		   lea      bx, default_output_file
+ 03BB  E8 0101			   call     printf_s
+ 03BE  8D 1E 029B R		   lea      bx, msg_crlf
+ 03C2  E8 00FA			   call     printf_s
+
+ 03C5				close_and_final2:
+
+ 03C5  8D 1E 02D8 R		   lea   bx, msg_group_size
+ 03C9  E8 00F3			   call  printf_s
+ 03CC  8D 1E 04A7 R		   lea   bx, group_size_str
+ 03D0  E8 00EC			   call  printf_s
+ 03D3  8D 1E 029B R		   lea   bx, msg_crlf
+ 03D7  E8 00E5			   call  printf_s
+ 03DA  8D 1E 0309 R		   lea   bx, msg_information
+ 03DE  E8 00DE			   call  printf_s
+ 03E1  8D 1E 01EE R		   lea   bx, s_nitrogen_bases
+ 03E5  E8 00D7			   call  printf_s
+ 03E8  8D 1E 029B R		   lea   bx, msg_crlf
+ 03EC  E8 00D0			   call  printf_s
+ 03EF  8D 1E 033D R		   lea   bx, msg_bases_size_input
+ 03F3  E8 00C9			   call  printf_s
+ 03F6  8D 1E 01F6 R		   lea   bx, file_size_str
+ 03FA  E8 00C2			   call  printf_s
+ 03FD  8D 1E 029B R		   lea   bx, msg_crlf  
+ 0401  E8 00BB			   call  printf_s
+ 0404  8D 1E 0365 R		   lea   bx, msg_group_count
+ 0408  E8 00B4			   call  printf_s
+ 040B  A1 0206 R		   mov   ax, position
+ 040E  8D 1E 01FB R		   lea   bx, base_lines
+ 0412  2B 07			   sub   ax, [bx]
+ 0414  8D 1E 0208 R		   lea   bx, position_str
+ 0418  E8 0019			   call  sprintf_w
+ 041B  8D 1E 0208 R		   lea   bx,position_str
+ 041F  E8 009D			   call  printf_s
+
+ 0422  EB 0C			   jmp   final
+
+ 0424				   file_less_than_group:
+ 0424  8D 1E 0421 R		      lea   bx, error_write_file_msg
+ 0428  E8 0094			      call  printf_s
+ 042B  C6 06 029A R 01		      mov   flag_error,1
+
+ 0430				final:
 				      .exit
 
 				;
@@ -634,50 +645,50 @@ trabalho.asm						     Page 1 - 1
 				; Função: Converte um inteiro (n) para (string)
 				;        sprintf(string->BX, "%d", n->AX)
 				; --------------------------------------------------------------------
- 0424				sprintf_w proc near
- 0424  A3 047E R		   mov   sw_n, ax
- 0427  B9 0005			   mov   cx, 5
- 042A  C7 06 0481 R 2710	   mov   sw_m, 10000
- 0430  C6 06 0480 R 00		   mov   sw_f, 0
+ 0434				sprintf_w proc near
+ 0434  A3 047E R		   mov   sw_n, ax
+ 0437  B9 0005			   mov   cx, 5
+ 043A  C7 06 0481 R 2710	   mov   sw_m, 10000
+ 0440  C6 06 0480 R 00		   mov   sw_f, 0
 
- 0435				sw_do:
- 0435  BA 0000			   mov   dx, 0
- 0438  A1 047E R		   mov   ax, sw_n
- 043B  F7 36 0481 R		   div   sw_m
+ 0445				sw_do:
+ 0445  BA 0000			   mov   dx, 0
+ 0448  A1 047E R		   mov   ax, sw_n
+ 044B  F7 36 0481 R		   div   sw_m
 
- 043F  3C 00			   cmp   al, 0
- 0441  75 07			   jne   sw_store
- 0443  80 3E 0480 R 00		   cmp   sw_f, 0
- 0448  74 0A			   je    sw_continue
- 044A				sw_store:
- 044A  04 30			   add   al, '0'
- 044C  88 07			   mov   [bx], al
- 044E  43			   inc   bx
+ 044F  3C 00			   cmp   al, 0
+ 0451  75 07			   jne   sw_store
+ 0453  80 3E 0480 R 00		   cmp   sw_f, 0
+ 0458  74 0A			   je    sw_continue
+ 045A				sw_store:
+ 045A  04 30			   add   al, '0'
+ 045C  88 07			   mov   [bx], al
+ 045E  43			   inc   bx
 
- 044F  C6 06 0480 R 01		   mov   sw_f, 1
- 0454				sw_continue:
+ 045F  C6 06 0480 R 01		   mov   sw_f, 1
+ 0464				sw_continue:
 
- 0454  89 16 047E R		   mov   sw_n, dx
+ 0464  89 16 047E R		   mov   sw_n, dx
 
- 0458  BA 0000			   mov   dx, 0
- 045B  A1 0481 R		   mov   ax, sw_m
- 045E  BD 000A			   mov   bp, 10
- 0461  F7 F5			   div   bp
- 0463  A3 0481 R		   mov   sw_m, ax
+ 0468  BA 0000			   mov   dx, 0
+ 046B  A1 0481 R		   mov   ax, sw_m
+ 046E  BD 000A			   mov   bp, 10
+ 0471  F7 F5			   div   bp
+ 0473  A3 0481 R		   mov   sw_m, ax
 
- 0466  49			   dec   cx
- 0467  83 F9 00			   cmp   cx, 0
- 046A  75 C9			   jnz   sw_do
+ 0476  49			   dec   cx
+ 0477  83 F9 00			   cmp   cx, 0
+ 047A  75 C9			   jnz   sw_do
 
- 046C  80 3E 0480 R 00		   cmp   sw_f, 0
- 0471  75 05			   jnz   sw_continua2
- 0473  C7 07 0030		   mov   [bx], '0'
- 0477  43			   inc   bx
- 0478				sw_continua2:
+ 047C  80 3E 0480 R 00		   cmp   sw_f, 0
+ 0481  75 05			   jnz   sw_continua2
+ 0483  C7 07 0030		   mov   [bx], '0'
+ 0487  43			   inc   bx
+ 0488				sw_continua2:
 
- 0478  C6 07 00			   mov   byte ptr [bx], 0
- 047B  C3			   ret
- 047C				sprintf_w endp
+ 0488  C6 07 00			   mov   byte ptr [bx], 0
+ 048B  C3			   ret
+ 048C				sprintf_w endp
 
 				;
 				; --------------------------------------------------------------------
@@ -688,15 +699,15 @@ trabalho.asm						     Page 1 - 1
 				; AX -> numero de caracteres lidos
 				; CF -> "0" se leitura ok
 				; --------------------------------------------------------------------
- 047C				get_char proc near
- 047C  B4 3F			   mov   ah, 3fh
- 047E  B9 0001			   mov   cx, 1
- 0481  8D 16 047D R		   lea   dx, file_buffer
- 0485  CD 21			   int   21h
- 0487  73 03 E9 FEFF		   jc    error_read_file
- 048C  8A 16 047D R		   mov   dl, file_buffer
- 0490  C3			   ret
- 0491				get_char endp
+ 048C				get_char proc near
+ 048C  B4 3F			   mov   ah, 3fh
+ 048E  B9 0001			   mov   cx, 1
+ 0491  8D 16 047D R		   lea   dx, file_buffer
+ 0495  CD 21			   int   21h
+ 0497  73 03 E9 FEAE		   jc    error_read_file
+ 049C  8A 16 047D R		   mov   dl, file_buffer
+ 04A0  C3			   ret
+ 04A1				get_char endp
 
 				;
 				; --------------------------------------------------------------------
@@ -706,22 +717,22 @@ trabalho.asm						     Page 1 - 1
 				; Sai:   AX -> handle do arquivo
 				; CF -> 0, se OK
 				; --------------------------------------------------------------------
- 0491				fopen proc near
- 0491  B0 00			   mov   al, 0
- 0493  B4 3D			   mov   ah, 3dh
- 0495  CD 21			   int   21h
- 0497  C3			   ret
- 0498				fopen endp
+ 04A1				fopen proc near
+ 04A1  B0 00			   mov   al, 0
+ 04A3  B4 3D			   mov   ah, 3dh
+ 04A5  CD 21			   int   21h
+ 04A7  C3			   ret
+ 04A8				fopen endp
 
 				;
 				; --------------------------------------------------------------------
 				; --------------------------------------------------------------------
- 0498				fseek proc near
- 0498  8B 1E 0479 R		   mov   bx, file_handle
- 049C  B8 4200			   mov   ax, 4200h
- 049F  CD 21			   int   21h
- 04A1  C3			   ret
- 04A2				fseek endp
+ 04A8				fseek proc near
+ 04A8  8B 1E 0479 R		   mov   bx, file_handle
+ 04AC  B8 4200			   mov   ax, 4200h
+ 04AF  CD 21			   int   21h
+ 04B1  C3			   ret
+ 04B2				fseek endp
 
 				;
 				; --------------------------------------------------------------------
@@ -730,56 +741,56 @@ trabalho.asm						     Page 1 - 1
 				; Sai:   AX -> handle do arquivo
 				; CF -> 0, se OK
 				; --------------------------------------------------------------------
- 04A2				fcreate proc near
- 04A2  B9 0000			   mov   cx, 0
- 04A5  B4 3C			   mov   ah, 3ch
- 04A7  CD 21			   int   21h
- 04A9  C3			   ret
- 04AA				fcreate endp
+ 04B2				fcreate proc near
+ 04B2  B9 0000			   mov   cx, 0
+ 04B5  B4 3C			   mov   ah, 3ch
+ 04B7  CD 21			   int   21h
+ 04B9  C3			   ret
+ 04BA				fcreate endp
 
 				;
 				; --------------------------------------------------------------------
 				; Entra: BX -> file handle
 				; Sai: CF -> "0" se OK
 				; --------------------------------------------------------------------
- 04AA				fclose proc near
- 04AA  B4 3E			   mov   ah, 3eh
- 04AC  CD 21			   int   21h
- 04AE  C3			   ret
- 04AF				fclose endp
+ 04BA				fclose proc near
+ 04BA  B4 3E			   mov   ah, 3eh
+ 04BC  CD 21			   int   21h
+ 04BE  C3			   ret
+ 04BF				fclose endp
 
 				;
 				; --------------------------------------------------------------------
 				; Função Escrever um string na tela
 				; printf_s(char *s -> BX)
 				; --------------------------------------------------------------------
- 04AF				printf_s proc near
- 04AF  8A 17			   mov   dl, [bx]
- 04B1  80 FA 00			   cmp   dl, 0
- 04B4  74 09			   je    ps_1
+ 04BF				printf_s proc near
+ 04BF  8A 17			   mov   dl, [bx]
+ 04C1  80 FA 00			   cmp   dl, 0
+ 04C4  74 09			   je    ps_1
 
- 04B6  53			   push  bx
- 04B7  B4 02			   mov   ah, 2
- 04B9  CD 21			   int   21h
- 04BB  5B			   pop   bx
+ 04C6  53			   push  bx
+ 04C7  B4 02			   mov   ah, 2
+ 04C9  CD 21			   int   21h
+ 04CB  5B			   pop   bx
 
- 04BC  43			   inc   bx
- 04BD  EB F0			   jmp   printf_s
+ 04CC  43			   inc   bx
+ 04CD  EB F0			   jmp   printf_s
 
- 04BF				ps_1:
- 04BF  C3			   ret
- 04C0				printf_s endp
+ 04CF				ps_1:
+ 04CF  C3			   ret
+ 04D0				printf_s endp
 
 				;
 				; --------------------------------------------------------------------
 				; Função Escrever um char na tela
 				; Entra: DL -> Char a ser escrito
 				; --------------------------------------------------------------------
- 04C0				printf_c proc near
- 04C0  B4 02			   mov   ah, 2
- 04C2  CD 21			   int   21h
- 04C4  C3			   ret
- 04C5				printf_c endp
+ 04D0				printf_c proc near
+ 04D0  B4 02			   mov   ah, 2
+ 04D2  CD 21			   int   21h
+ 04D4  C3			   ret
+ 04D5				printf_c endp
 
 				;
 				; --------------------------------------------------------------------
@@ -788,14 +799,14 @@ trabalho.asm						     Page 1 - 1
 				; Sai: AX -> numero de caracteres escritos
 				; CF -> "0" se escrita ok
 				; --------------------------------------------------------------------
- 04C5				set_char proc near
- 04C5  B4 40			   mov   ah, 40h
- 04C7  B9 0001			   mov   cx, 1
- 04CA  88 16 047D R		   mov   file_buffer, dl
- 04CE  8D 16 047D R		   lea   dx, file_buffer
- 04D2  CD 21			   int   21h
- 04D4  C3			   ret
- 04D5				set_char endp
+ 04D5				set_char proc near
+ 04D5  B4 40			   mov   ah, 40h
+ 04D7  B9 0001			   mov   cx, 1
+ 04DA  88 16 047D R		   mov   file_buffer, dl
+ 04DE  8D 16 047D R		   lea   dx, file_buffer
+ 04E2  CD 21			   int   21h
+ 04E4  C3			   ret
+ 04E5				set_char endp
 
 				;
 				; --------------------------------------------------------------------
@@ -810,367 +821,367 @@ trabalho.asm						     Page 1 - 1
 				; }
 				; return
 				; --------------------------------------------------------------------
- 04D5				atoi proc near
+ 04E5				atoi proc near
 
 				   ; A = 0;
- 04D5  B8 0000			   mov ax, 0
+ 04E5  B8 0000			   mov ax, 0
 
- 04D8				   atoi_2:
+ 04E8				   atoi_2:
 				   ; while (*S!='\0') {
- 04D8  80 3F 00			   cmp byte ptr [bx], 0
- 04DB  74 11			   jz atoi_1
+ 04E8  80 3F 00			   cmp byte ptr [bx], 0
+ 04EB  74 11			   jz atoi_1
 
 				   ; A = 10 * A
- 04DD  B9 000A			   mov cx, 10
- 04E0  F7 E1			   mul cx
+ 04ED  B9 000A			   mov cx, 10
+ 04F0  F7 E1			   mul cx
 
 				   ; A = A + *S
- 04E2  B5 00			   mov ch, 0
- 04E4  8A 0F			   mov cl, [bx]
- 04E6  03 C1			   add ax, cx
+ 04F2  B5 00			   mov ch, 0
+ 04F4  8A 0F			   mov cl, [bx]
+ 04F6  03 C1			   add ax, cx
 
 				   ; A = A - '0'
- 04E8  83 E8 30			   sub ax, '0'
+ 04F8  83 E8 30			   sub ax, '0'
 
 				   ; ++S
- 04EB  43			   inc bx
+ 04FB  43			   inc bx
 
 				   ;}
- 04EC  EB EA			   jmp atoi_2
+ 04FC  EB EA			   jmp atoi_2
 
- 04EE				   atoi_1:
+ 04FE				   atoi_1:
 				   ; return
- 04EE  C3			   ret
+ 04FE  C3			   ret
 
- 04EF				atoi endp
+ 04FF				atoi endp
 
 				;
 				; --------------------------------------------------------------------
 				; Parse commandline in arguments
 				; --------------------------------------------------------------------
- 04EF				get_commandline proc near
- 04EF  83 F9 00			   cmp cx, 0
- 04F2  75 03			   jnz parse_command_line          ; YES - PROCESS COMMAND LINE PARAMETERS
- 04F4  E9 012A			   jmp no_arguments           ; NO - PARAMETERS
+ 04FF				get_commandline proc near
+ 04FF  83 F9 00			   cmp cx, 0
+ 0502  75 03			   jnz parse_command_line          ; YES - PROCESS COMMAND LINE PARAMETERS
+ 0504  E9 012A			   jmp no_arguments           ; NO - PARAMETERS
 
- 04F7				parse_command_line:
- 04F7				   skip_space:
- 04F7  26: 8A 04		      mov al, es:[si]
- 04FA  3C 20			      cmp al, ' '
- 04FC  74 0A			      je next_option
- 04FE  3C 0D			      cmp al, CR
- 0500  75 03 E9 011C		      je no_arguments
- 0505  46			      inc si
- 0506  EB EF			      jmp skip_space
+ 0507				parse_command_line:
+ 0507				   skip_space:
+ 0507  26: 8A 04		      mov al, es:[si]
+ 050A  3C 20			      cmp al, ' '
+ 050C  74 0A			      je next_option
+ 050E  3C 0D			      cmp al, CR
+ 0510  75 03 E9 011C		      je no_arguments
+ 0515  46			      inc si
+ 0516  EB EF			      jmp skip_space
 
- 0508				   next_option:
- 0508  46			      inc si
- 0509  26: 8A 04		      mov al, es:[si]
+ 0518				   next_option:
+ 0518  46			      inc si
+ 0519  26: 8A 04		      mov al, es:[si]
 
 				      ; Verificar se encontramos uma opção válida
- 050C  3C 2D			      cmp al, '-'
- 050E  74 03 E9 00BE		      jne invalid_option
+ 051C  3C 2D			      cmp al, '-'
+ 051E  74 03 E9 00BE		      jne invalid_option
 
 				      ; Move string pointer
- 0513  46			      inc si
- 0514  26: 8A 04		      mov al, es:[si]
- 0517  3C 0D			      cmp al, CR
- 0519  75 03 E9 00B3		      je invalid_option
- 051E  3C 66			      cmp al, 'f'
- 0520  74 0A			      je f_option
- 0522  3C 6F			      cmp al, 'o'
- 0524  74 26			      je o_option
- 0526  3C 6E			      cmp al, 'n'
- 0528  74 42			      je n_option
- 052A  EB 6F			      jmp base_option
+ 0523  46			      inc si
+ 0524  26: 8A 04		      mov al, es:[si]
+ 0527  3C 0D			      cmp al, CR
+ 0529  75 03 E9 00B3		      je invalid_option
+ 052E  3C 66			      cmp al, 'f'
+ 0530  74 0A			      je f_option
+ 0532  3C 6F			      cmp al, 'o'
+ 0534  74 26			      je o_option
+ 0536  3C 6E			      cmp al, 'n'
+ 0538  74 42			      je n_option
+ 053A  EB 6F			      jmp base_option
 
- 052C				   f_option:
- 052C  8D 3E 017F R		      lea di, input_file
- 0530  46			      inc si
- 0531  26: 8A 04		      mov al, es:[si]
- 0534  3C 20			      cmp al, ' '
- 0536  74 03 E9 00A6		      jne invalid_option_f
- 053B				      f_option_loop:
- 053B  46			         inc si
- 053C  26: 8A 04		         mov al, es:[si]
- 053F  3C 20			         cmp al, ' '
- 0541  74 B4			         je skip_space
- 0543  3C 0D			         cmp al, CR
- 0545  74 B0			         je skip_space
- 0547  88 05			         mov [di], al
- 0549  47			         inc di
- 054A  EB EF			         jmp f_option_loop
+ 053C				   f_option:
+ 053C  8D 3E 017F R		      lea di, input_file
+ 0540  46			      inc si
+ 0541  26: 8A 04		      mov al, es:[si]
+ 0544  3C 20			      cmp al, ' '
+ 0546  74 03 E9 00A6		      jne invalid_option_f
+ 054B				      f_option_loop:
+ 054B  46			         inc si
+ 054C  26: 8A 04		         mov al, es:[si]
+ 054F  3C 20			         cmp al, ' '
+ 0551  74 B4			         je skip_space
+ 0553  3C 0D			         cmp al, CR
+ 0555  74 B0			         je skip_space
+ 0557  88 05			         mov [di], al
+ 0559  47			         inc di
+ 055A  EB EF			         jmp f_option_loop
 
- 054C				   o_option:
- 054C  8D 3E 01B1 R		      lea di, output_file
- 0550  46			      inc si
- 0551  26: 8A 04		      mov al, es:[si]
- 0554  3C 20			      cmp al, ' '
- 0556  74 03 E9 0096		      jne invalid_option_o
- 055B				      o_option_loop:
- 055B  46			         inc si
- 055C  26: 8A 04		         mov al, es:[si]
- 055F  3C 20			         cmp al, ' '
- 0561  74 94			         je skip_space
- 0563  3C 0D			         cmp al, CR
- 0565  74 90			         je skip_space
- 0567  88 05			         mov [di], al
- 0569  47			         inc di
- 056A  EB EF			         jmp o_option_loop
+ 055C				   o_option:
+ 055C  8D 3E 01B1 R		      lea di, output_file
+ 0560  46			      inc si
+ 0561  26: 8A 04		      mov al, es:[si]
+ 0564  3C 20			      cmp al, ' '
+ 0566  74 03 E9 0096		      jne invalid_option_o
+ 056B				      o_option_loop:
+ 056B  46			         inc si
+ 056C  26: 8A 04		         mov al, es:[si]
+ 056F  3C 20			         cmp al, ' '
+ 0571  74 94			         je skip_space
+ 0573  3C 0D			         cmp al, CR
+ 0575  74 90			         je skip_space
+ 0577  88 05			         mov [di], al
+ 0579  47			         inc di
+ 057A  EB EF			         jmp o_option_loop
 
- 056C				   n_option:
- 056C  8D 3E 04A7 R		      lea di, group_size_str
- 0570  46			      inc si
- 0571  26: 8A 04		      mov al, es:[si]
- 0574  3C 20			      cmp al, ' '
- 0576  74 03 E9 0086		      jne invalid_option_n
- 057B				      n_option_loop:
- 057B  46			         inc si
- 057C  26: 8A 04		         mov al, es:[si]
- 057F  3C 20			         cmp al, ' '
- 0581  74 11			         je end_n_option
- 0583  3C 0D			         cmp al, CR
- 0585  74 0D			         je end_n_option
- 0587  3C 39			         cmp al, 39h
- 0589  7F 76			         jg invalid_option_n
- 058B  3C 30			         cmp al, 30h
- 058D  7C 72			         jl invalid_option_n
- 058F  88 05			         mov [di], al
- 0591  47			         inc di
- 0592  EB E7			         jmp n_option_loop
- 0594				      end_n_option:
- 0594  C7 05 0000		         mov      [di], 0
- 0598  E9 FF5C			         jmp      skip_space
+ 057C				   n_option:
+ 057C  8D 3E 04A7 R		      lea di, group_size_str
+ 0580  46			      inc si
+ 0581  26: 8A 04		      mov al, es:[si]
+ 0584  3C 20			      cmp al, ' '
+ 0586  74 03 E9 0086		      jne invalid_option_n
+ 058B				      n_option_loop:
+ 058B  46			         inc si
+ 058C  26: 8A 04		         mov al, es:[si]
+ 058F  3C 20			         cmp al, ' '
+ 0591  74 11			         je end_n_option
+ 0593  3C 0D			         cmp al, CR
+ 0595  74 0D			         je end_n_option
+ 0597  3C 39			         cmp al, 39h
+ 0599  7F 76			         jg invalid_option_n
+ 059B  3C 30			         cmp al, 30h
+ 059D  7C 72			         jl invalid_option_n
+ 059F  88 05			         mov [di], al
+ 05A1  47			         inc di
+ 05A2  EB E7			         jmp n_option_loop
+ 05A4				      end_n_option:
+ 05A4  C7 05 0000		         mov      [di], 0
+ 05A8  E9 FF5C			         jmp      skip_space
 
- 059B				   base_option:
- 059B  8D 3E 021E R		      lea di, base_valid    ; di = base_valid initial adress
- 059F  8D 1E 01E9 R		      lea bx, nitrogen_bases
- 05A3  3C 20			      cmp al, ' '           ; if space invalid
- 05A5  74 6A			      je invalid_option_a
- 05A7  3C 0D			      cmp al, CR            ; if cr invalid
- 05A9  74 66			      je invalid_option_a
- 05AB				   base_check_loop:
+ 05AB				   base_option:
  05AB  8D 3E 021E R		      lea di, base_valid    ; di = base_valid initial adress
- 05AF  26: 8A 04		      mov al, es:[si]       ; al = cmdline char
- 05B2  3C 20			      cmp al, ' '           ; if space base_cmd ended
- 05B4  74 18			      je done_parsing_base
- 05B6  3C 0D			      cmp al, CR            ; if cr base_cmd ended
- 05B8  74 14			      je done_parsing_base
- 05BA				   base_valid_loop:
- 05BA  80 3D 00			      cmp byte ptr [di], 0
- 05BD  74 52			      je invalid_option_a
- 05BF  8A 0D			      mov cl, [di]
- 05C1  38 C1			      cmp cl, al
- 05C3  74 03			      je valid_base
- 05C5  47			      inc di
- 05C6  EB F2			      jmp base_valid_loop
+ 05AF  8D 1E 01E9 R		      lea bx, nitrogen_bases
+ 05B3  3C 20			      cmp al, ' '           ; if space invalid
+ 05B5  74 6A			      je invalid_option_a
+ 05B7  3C 0D			      cmp al, CR            ; if cr invalid
+ 05B9  74 66			      je invalid_option_a
+ 05BB				   base_check_loop:
+ 05BB  8D 3E 021E R		      lea di, base_valid    ; di = base_valid initial adress
+ 05BF  26: 8A 04		      mov al, es:[si]       ; al = cmdline char
+ 05C2  3C 20			      cmp al, ' '           ; if space base_cmd ended
+ 05C4  74 18			      je done_parsing_base
+ 05C6  3C 0D			      cmp al, CR            ; if cr base_cmd ended
+ 05C8  74 14			      je done_parsing_base
+ 05CA				   base_valid_loop:
+ 05CA  80 3D 00			      cmp byte ptr [di], 0
+ 05CD  74 52			      je invalid_option_a
+ 05CF  8A 0D			      mov cl, [di]
+ 05D1  38 C1			      cmp cl, al
+ 05D3  74 03			      je valid_base
+ 05D5  47			      inc di
+ 05D6  EB F2			      jmp base_valid_loop
 
- 05C8				valid_base:
- 05C8  88 07			      mov [bx], al
- 05CA  43			      inc bx
- 05CB  46			      inc si
- 05CC  EB DD			      jmp base_check_loop
+ 05D8				valid_base:
+ 05D8  88 07			      mov [bx], al
+ 05DA  43			      inc bx
+ 05DB  46			      inc si
+ 05DC  EB DD			      jmp base_check_loop
 
- 05CE				done_parsing_base:
- 05CE  E9 FF26			      jmp      skip_space
+ 05DE				done_parsing_base:
+ 05DE  E9 FF26			      jmp      skip_space
 
- 05D1				invalid_option:
- 05D1  8D 1E 0224 R		      lea bx, error_command_line
- 05D5  E8 FED7			      call printf_s
- 05D8  C6 06 029A R 01		      mov flag_error, 1
-				      .exit
- 05E1				invalid_option_f:
- 05E1  8D 1E 023F R		      lea bx, error_command_line_f
- 05E5  E8 FEC7			      call printf_s
+ 05E1				invalid_option:
+ 05E1  8D 1E 0224 R		      lea bx, error_command_line
+ 05E5  E8 FED7			      call printf_s
  05E8  C6 06 029A R 01		      mov flag_error, 1
 				      .exit
- 05F1				invalid_option_o:
- 05F1  8D 1E 0255 R		      lea bx, error_command_line_o
- 05F5  E8 FEB7			      call printf_s
+ 05F1				invalid_option_f:
+ 05F1  8D 1E 023F R		      lea bx, error_command_line_f
+ 05F5  E8 FEC7			      call printf_s
  05F8  C6 06 029A R 01		      mov flag_error, 1
 				      .exit
- 0601				invalid_option_n:
- 0601  8D 1E 026B R		      lea bx, error_command_line_n
- 0605  E8 FEA7			      call printf_s
+ 0601				invalid_option_o:
+ 0601  8D 1E 0255 R		      lea bx, error_command_line_o
+ 0605  E8 FEB7			      call printf_s
  0608  C6 06 029A R 01		      mov flag_error, 1
 				      .exit
- 0611				invalid_option_a:
+ 0611				invalid_option_n:
  0611  8D 1E 026B R		      lea bx, error_command_line_n
- 0615  E8 FE97			      call printf_s
+ 0615  E8 FEA7			      call printf_s
  0618  C6 06 029A R 01		      mov flag_error, 1
 				      .exit
+ 0621				invalid_option_a:
+ 0621  8D 1E 026B R		      lea bx, error_command_line_n
+ 0625  E8 FE97			      call printf_s
+ 0628  C6 06 029A R 01		      mov flag_error, 1
+				      .exit
 
- 0621				no_arguments:
- 0621  8D 1E 04A7 R		      lea      bx, group_size_str
- 0625  E8 FEAD			      call     atoi
- 0628  8D 1E 04AC R		      lea      bx, group_size
- 062C  89 07			      mov      [bx], ax
- 062E  83 F8 00			      cmp      ax, 0
- 0631  74 9E			      je       invalid_option
- 0633  C3			      ret
- 0634				get_commandline endp
+ 0631				no_arguments:
+ 0631  8D 1E 04A7 R		      lea      bx, group_size_str
+ 0635  E8 FEAD			      call     atoi
+ 0638  8D 1E 04AC R		      lea      bx, group_size
+ 063C  89 07			      mov      [bx], ax
+ 063E  83 F8 00			      cmp      ax, 0
+ 0641  74 9E			      je       invalid_option
+ 0643  C3			      ret
+ 0644				get_commandline endp
 
 				;
 				; --------------------------------------------------------------------
 				; Sort nitrogen bases command line parameter
 				; --------------------------------------------------------------------
- 0634				sort_nitrogen_bases  proc  near
+ 0644				sort_nitrogen_bases  proc  near
 
- 0634  8D 3E 01E9 R		      lea   di,nitrogen_bases
- 0638  8D 36 01EE R		      lea   si,s_nitrogen_bases
- 063C				   s_loop_a:
- 063C  8A 15			      mov   dl, [di]
- 063E  80 FA 00			      cmp   dl, 0
- 0641  74 0D			      je    end_put_a
- 0643  80 FA 61			      cmp   dl, 'a'
- 0646  74 03			      je    s_put_a
- 0648  47			      inc   di
- 0649  EB F1			      jmp   s_loop_a
- 064B				   s_put_a:
- 064B  C7 04 0061		      mov   [si],'a'
- 064F  46			      inc   si 
- 0650				   end_put_a:
- 0650  8D 3E 01E9 R		      lea   di,nitrogen_bases
- 0654				   s_loop_t:
- 0654  8A 15			      mov   dl, [di]
- 0656  80 FA 00			      cmp   dl, 0
- 0659  74 0D			      je    end_put_t
- 065B  80 FA 74			      cmp   dl, 't'
- 065E  74 03			      je    s_put_t
- 0660  47			      inc   di
- 0661  EB F1			      jmp   s_loop_t
- 0663				   s_put_t:
- 0663  C7 04 0074		      mov   [si],'t'
- 0667  46			      inc   si
- 0668				   end_put_t:
- 0668  8D 3E 01E9 R		      lea   di,nitrogen_bases
- 066C				   s_loop_c:
- 066C  8A 15			      mov   dl, [di]
- 066E  80 FA 00			      cmp   dl, 0
- 0671  74 0D			      je    end_put_c
- 0673  80 FA 63			      cmp   dl, 'c'
- 0676  74 03			      je    s_put_c
- 0678  47			      inc   di
- 0679  EB F1			      jmp   s_loop_c
- 067B				   s_put_c:
- 067B  C7 04 0063		      mov   [si],'c'
- 067F  46			      inc   si
- 0680				   end_put_c:
- 0680  8D 3E 01E9 R		      lea   di,nitrogen_bases
- 0684				   s_loop_g:
- 0684  8A 15			      mov   dl, [di]
- 0686  80 FA 00			      cmp   dl, 0
- 0689  74 0D			      je    end_put_g
- 068B  80 FA 67			      cmp   dl, 'g'
- 068E  74 03			      je    s_put_g
- 0690  47			      inc   di
- 0691  EB F1			      jmp   s_loop_g
- 0693				   s_put_g:
- 0693  C7 04 0067		      mov   [si],'g'
- 0697  46			      inc   si
- 0698				   end_put_g:
- 0698  8D 3E 01E9 R		      lea   di, nitrogen_bases
- 069C				   s_loop_plus:
- 069C  8A 15			      mov   dl, [di]
- 069E  80 FA 00			      cmp   dl, 0
- 06A1  74 0C			      je    s_ret
- 06A3  80 FA 2B			      cmp   dl, '+'
- 06A6  74 03			      je    s_put_plus
- 06A8  47			      inc   di
- 06A9  EB F1			      jmp   s_loop_plus
- 06AB				   s_put_plus:
- 06AB  C7 04 002B		      mov   [si],'+'
- 06AF				   s_ret:
- 06AF  C3			      ret
- 06B0				sort_nitrogen_bases endp
+ 0644  8D 3E 01E9 R		      lea   di,nitrogen_bases
+ 0648  8D 36 01EE R		      lea   si,s_nitrogen_bases
+ 064C				   s_loop_a:
+ 064C  8A 15			      mov   dl, [di]
+ 064E  80 FA 00			      cmp   dl, 0
+ 0651  74 0D			      je    end_put_a
+ 0653  80 FA 61			      cmp   dl, 'a'
+ 0656  74 03			      je    s_put_a
+ 0658  47			      inc   di
+ 0659  EB F1			      jmp   s_loop_a
+ 065B				   s_put_a:
+ 065B  C7 04 0061		      mov   [si],'a'
+ 065F  46			      inc   si 
+ 0660				   end_put_a:
+ 0660  8D 3E 01E9 R		      lea   di,nitrogen_bases
+ 0664				   s_loop_t:
+ 0664  8A 15			      mov   dl, [di]
+ 0666  80 FA 00			      cmp   dl, 0
+ 0669  74 0D			      je    end_put_t
+ 066B  80 FA 74			      cmp   dl, 't'
+ 066E  74 03			      je    s_put_t
+ 0670  47			      inc   di
+ 0671  EB F1			      jmp   s_loop_t
+ 0673				   s_put_t:
+ 0673  C7 04 0074		      mov   [si],'t'
+ 0677  46			      inc   si
+ 0678				   end_put_t:
+ 0678  8D 3E 01E9 R		      lea   di,nitrogen_bases
+ 067C				   s_loop_c:
+ 067C  8A 15			      mov   dl, [di]
+ 067E  80 FA 00			      cmp   dl, 0
+ 0681  74 0D			      je    end_put_c
+ 0683  80 FA 63			      cmp   dl, 'c'
+ 0686  74 03			      je    s_put_c
+ 0688  47			      inc   di
+ 0689  EB F1			      jmp   s_loop_c
+ 068B				   s_put_c:
+ 068B  C7 04 0063		      mov   [si],'c'
+ 068F  46			      inc   si
+ 0690				   end_put_c:
+ 0690  8D 3E 01E9 R		      lea   di,nitrogen_bases
+ 0694				   s_loop_g:
+ 0694  8A 15			      mov   dl, [di]
+ 0696  80 FA 00			      cmp   dl, 0
+ 0699  74 0D			      je    end_put_g
+ 069B  80 FA 67			      cmp   dl, 'g'
+ 069E  74 03			      je    s_put_g
+ 06A0  47			      inc   di
+ 06A1  EB F1			      jmp   s_loop_g
+ 06A3				   s_put_g:
+ 06A3  C7 04 0067		      mov   [si],'g'
+ 06A7  46			      inc   si
+ 06A8				   end_put_g:
+ 06A8  8D 3E 01E9 R		      lea   di, nitrogen_bases
+ 06AC				   s_loop_plus:
+ 06AC  8A 15			      mov   dl, [di]
+ 06AE  80 FA 00			      cmp   dl, 0
+ 06B1  74 0C			      je    s_ret
+ 06B3  80 FA 2B			      cmp   dl, '+'
+ 06B6  74 03			      je    s_put_plus
+ 06B8  47			      inc   di
+ 06B9  EB F1			      jmp   s_loop_plus
+ 06BB				   s_put_plus:
+ 06BB  C7 04 002B		      mov   [si],'+'
+ 06BF				   s_ret:
+ 06BF  C3			      ret
+ 06C0				sort_nitrogen_bases endp
 
 
 				; Função para calcular o tamanho de caracteres no arquivo lido
 				; Entrada: BX -> file handle
 				; Saída: DX:AX -> tamanho do arquivo em caracteres
 
- 06B0				calculate_file_size proc near
- 06B0  33 C0			   xor ax, ax        ; Inicialize AX com 0
- 06B2  33 C9			   xor cx, cx        ; Inicialize CX com 0 para usar como contador
+ 06C0				calculate_file_size proc near
+ 06C0  33 C0			   xor ax, ax        ; Inicialize AX com 0
+ 06C2  33 C9			   xor cx, cx        ; Inicialize CX com 0 para usar como contador
 
- 06B4				cfs_read_loop:
- 06B4  8B 1E 0479 R		   mov   bx, file_handle
- 06B8  E8 FDC1			   call  get_char
- 06BB  73 03 E9 FCCB		   jc    error_read_file
- 06C0  83 F8 00			   cmp   ax, 0
- 06C3  74 27			   jz    end_of_file
- 06C5  80 FA 41			   cmp   dl, 'A'
- 06C8  74 1C			   je    inc_file_size
- 06CA  80 FA 47			   cmp   dl, 'G'
- 06CD  74 17			   je    inc_file_size
- 06CF  80 FA 43			   cmp   dl, 'C'
- 06D2  74 12			   je    inc_file_size
- 06D4  80 FA 54			   cmp   dl, 'T'
- 06D7  74 0D			   je    inc_file_size
- 06D9  80 FA 0D			   cmp   dl, CR
- 06DC  74 0C			   je    loop_file_size
- 06DE  80 FA 0A			   cmp   dl, LF
- 06E1  74 07			   je    loop_file_size
- 06E3  E9 FB70			   jmp   error_unknown_char
- 06E6				   inc_file_size:
- 06E6  FF 06 01F4 R		   inc   file_size
- 06EA				   loop_file_size:
- 06EA  EB C8			   jmp   cfs_read_loop
+ 06C4				cfs_read_loop:
+ 06C4  8B 1E 0479 R		   mov   bx, file_handle
+ 06C8  E8 FDC1			   call  get_char
+ 06CB  73 03 E9 FC7A		   jc    error_read_file
+ 06D0  83 F8 00			   cmp   ax, 0
+ 06D3  74 27			   jz    end_of_file
+ 06D5  80 FA 41			   cmp   dl, 'A'
+ 06D8  74 1C			   je    inc_file_size
+ 06DA  80 FA 47			   cmp   dl, 'G'
+ 06DD  74 17			   je    inc_file_size
+ 06DF  80 FA 43			   cmp   dl, 'C'
+ 06E2  74 12			   je    inc_file_size
+ 06E4  80 FA 54			   cmp   dl, 'T'
+ 06E7  74 0D			   je    inc_file_size
+ 06E9  80 FA 0D			   cmp   dl, CR
+ 06EC  74 0C			   je    loop_file_size
+ 06EE  80 FA 0A			   cmp   dl, LF
+ 06F1  74 07			   je    loop_file_size
+ 06F3  E9 FB1F			   jmp   error_unknown_char
+ 06F6				   inc_file_size:
+ 06F6  FF 06 01F4 R		   inc   file_size
+ 06FA				   loop_file_size:
+ 06FA  EB C8			   jmp   cfs_read_loop
 
- 06EC				end_of_file:
- 06EC  C3			   ret
- 06ED				calculate_file_size endp
+ 06FC				end_of_file:
+ 06FC  C3			   ret
+ 06FD				calculate_file_size endp
 
 				; --------------------------------------------------------------------
 				; Print a formatted message with a carriage return and line feed
 				; --------------------------------------------------------------------
- 06ED				printf_crlf proc near
- 06ED  8D 1E 029B R		   lea bx, msg_crlf
- 06F1  E8 FDBB			   call printf_s
- 06F4  C3			   ret
- 06F5				printf_crlf endp
+ 06FD				printf_crlf proc near
+ 06FD  8D 1E 029B R		   lea bx, msg_crlf
+ 0701  E8 FDBB			   call printf_s
+ 0704  C3			   ret
+ 0705				printf_crlf endp
 
 				; --------------------------------------------------------------------
 				; Print a formatted message with a line feed
 				; --------------------------------------------------------------------
- 06F5				printf_lf proc near
- 06F5  BB 000A			   mov bx, LF
- 06F8  E8 FDB4			   call printf_s
- 06FB  C3			   ret
- 06FC				printf_lf endp
+ 0705				printf_lf proc near
+ 0705  BB 000A			   mov bx, LF
+ 0708  E8 FDB4			   call printf_s
+ 070B  C3			   ret
+ 070C				printf_lf endp
 
 				; --------------------------------------------------------------------
 				; Print a formatted message with a carriage return
 				; --------------------------------------------------------------------
- 06FC				printf_cr proc near
- 06FC  BB 000D			   mov bx, CR
- 06FF  E8 FDAD			   call printf_s
- 0702  C3			   ret
- 0703				printf_cr endp
+ 070C				printf_cr proc near
+ 070C  BB 000D			   mov bx, CR
+ 070F  E8 FDAD			   call printf_s
+ 0712  C3			   ret
+ 0713				printf_cr endp
 
 				; --------------------------------------------------------------------
 				; Print a formatted message followed by a carriage return and line feed
 				; --------------------------------------------------------------------
- 0703				printf_crlf_s proc near
- 0703  E8 FDA9			   call printf_s
- 0706  E8 FFE4			   call printf_crlf
- 0709  C3			   ret
- 070A				printf_crlf_s endp
+ 0713				printf_crlf_s proc near
+ 0713  E8 FDA9			   call printf_s
+ 0716  E8 FFE4			   call printf_crlf
+ 0719  C3			   ret
+ 071A				printf_crlf_s endp
 
 				; --------------------------------------------------------------------
 				; Function: Clear the command line buffer
 				; --------------------------------------------------------------------
- 070A				clear_cmdline_buffer proc near
- 070A  BF 0100 R		   mov di, offset cmdline
- 070D  B9 0080			   mov cx, 128
- 0710  32 C0			   xor al, al
- 0712  F3/ AA			   rep stosb
- 0714  C3			   ret
- 0715				clear_cmdline_buffer endp
+ 071A				clear_cmdline_buffer proc near
+ 071A  BF 0100 R		   mov di, offset cmdline
+ 071D  B9 0080			   mov cx, 128
+ 0720  32 C0			   xor al, al
+ 0722  F3/ AA			   rep stosb
+ 0724  C3			   ret
+ 0725				clear_cmdline_buffer endp
 
 				end
 
-Microsoft (R) Macro Assembler Version 6.11		    09/13/23 24:53:08
+Microsoft (R) Macro Assembler Version 6.11		    09/14/23 11:47:59
 trabalho.asm						     Symbols 2 - 1
 
 
@@ -1183,31 +1194,31 @@ Segments and Groups:
 DGROUP . . . . . . . . . . . . .	GROUP
 _DATA  . . . . . . . . . . . . .	16 Bit	 04AD	  Word	  Public  'DATA'	
 STACK  . . . . . . . . . . . . .	16 Bit	 0400	  Para	  Stack	  'STACK'	 
-_TEXT  . . . . . . . . . . . . .	16 Bit	 0715	  Word	  Public  'CODE'	
+_TEXT  . . . . . . . . . . . . .	16 Bit	 0725	  Word	  Public  'CODE'	
 
 
 Procedures,  parameters and locals:
 
                 N a m e                 Type     Value    Attr
 
-atoi . . . . . . . . . . . . . .	P Near	 04D5	  _TEXT	Length= 001A Private
-calculate_file_size  . . . . . .	P Near	 06B0	  _TEXT	Length= 003D Private
-clear_cmdline_buffer . . . . . .	P Near	 070A	  _TEXT	Length= 000B Private
-fclose . . . . . . . . . . . . .	P Near	 04AA	  _TEXT	Length= 0005 Private
-fcreate  . . . . . . . . . . . .	P Near	 04A2	  _TEXT	Length= 0008 Private
-fopen  . . . . . . . . . . . . .	P Near	 0491	  _TEXT	Length= 0007 Private
-fseek  . . . . . . . . . . . . .	P Near	 0498	  _TEXT	Length= 000A Private
-get_char . . . . . . . . . . . .	P Near	 047C	  _TEXT	Length= 0015 Private
-get_commandline  . . . . . . . .	P Near	 04EF	  _TEXT	Length= 0145 Private
-printf_crlf_s  . . . . . . . . .	P Near	 0703	  _TEXT	Length= 0007 Private
-printf_crlf  . . . . . . . . . .	P Near	 06ED	  _TEXT	Length= 0008 Private
-printf_cr  . . . . . . . . . . .	P Near	 06FC	  _TEXT	Length= 0007 Private
-printf_c . . . . . . . . . . . .	P Near	 04C0	  _TEXT	Length= 0005 Private
-printf_lf  . . . . . . . . . . .	P Near	 06F5	  _TEXT	Length= 0007 Private
-printf_s . . . . . . . . . . . .	P Near	 04AF	  _TEXT	Length= 0011 Private
-set_char . . . . . . . . . . . .	P Near	 04C5	  _TEXT	Length= 0010 Private
-sort_nitrogen_bases  . . . . . .	P Near	 0634	  _TEXT	Length= 007C Private
-sprintf_w  . . . . . . . . . . .	P Near	 0424	  _TEXT	Length= 0058 Private
+atoi . . . . . . . . . . . . . .	P Near	 04E5	  _TEXT	Length= 001A Private
+calculate_file_size  . . . . . .	P Near	 06C0	  _TEXT	Length= 003D Private
+clear_cmdline_buffer . . . . . .	P Near	 071A	  _TEXT	Length= 000B Private
+fclose . . . . . . . . . . . . .	P Near	 04BA	  _TEXT	Length= 0005 Private
+fcreate  . . . . . . . . . . . .	P Near	 04B2	  _TEXT	Length= 0008 Private
+fopen  . . . . . . . . . . . . .	P Near	 04A1	  _TEXT	Length= 0007 Private
+fseek  . . . . . . . . . . . . .	P Near	 04A8	  _TEXT	Length= 000A Private
+get_char . . . . . . . . . . . .	P Near	 048C	  _TEXT	Length= 0015 Private
+get_commandline  . . . . . . . .	P Near	 04FF	  _TEXT	Length= 0145 Private
+printf_crlf_s  . . . . . . . . .	P Near	 0713	  _TEXT	Length= 0007 Private
+printf_crlf  . . . . . . . . . .	P Near	 06FD	  _TEXT	Length= 0008 Private
+printf_cr  . . . . . . . . . . .	P Near	 070C	  _TEXT	Length= 0007 Private
+printf_c . . . . . . . . . . . .	P Near	 04D0	  _TEXT	Length= 0005 Private
+printf_lf  . . . . . . . . . . .	P Near	 0705	  _TEXT	Length= 0007 Private
+printf_s . . . . . . . . . . . .	P Near	 04BF	  _TEXT	Length= 0011 Private
+set_char . . . . . . . . . . . .	P Near	 04D5	  _TEXT	Length= 0010 Private
+sort_nitrogen_bases  . . . . . .	P Near	 0644	  _TEXT	Length= 007C Private
+sprintf_w  . . . . . . . . . . .	P Near	 0434	  _TEXT	Length= 0058 Private
 
 
 Symbols:
@@ -1228,90 +1239,91 @@ CMDCNT . . . . . . . . . . . . .	Byte	 0080	  _DATA
 CMDSTR . . . . . . . . . . . . .	Byte	 0081	  _DATA	
 CR . . . . . . . . . . . . . . .	Number	 000Dh	 
 LF . . . . . . . . . . . . . . .	Number	 000Ah	 
-atoi_1 . . . . . . . . . . . . .	L Near	 04EE	  _TEXT	
-atoi_2 . . . . . . . . . . . . .	L Near	 04D8	  _TEXT	
+atoi_1 . . . . . . . . . . . . .	L Near	 04FE	  _TEXT	
+atoi_2 . . . . . . . . . . . . .	L Near	 04E8	  _TEXT	
 base_a_str . . . . . . . . . . .	Byte	 0483	  _DATA	
 base_at_str  . . . . . . . . . .	Byte	 049B	  _DATA	
 base_a . . . . . . . . . . . . .	Word	 01FD	  _DATA	
 base_c_str . . . . . . . . . . .	Byte	 0489	  _DATA	
 base_cg_str  . . . . . . . . . .	Byte	 04A1	  _DATA	
-base_check_loop  . . . . . . . .	L Near	 05AB	  _TEXT	
+base_check_loop  . . . . . . . .	L Near	 05BB	  _TEXT	
 base_c . . . . . . . . . . . . .	Word	 01FF	  _DATA	
 base_g_str . . . . . . . . . . .	Byte	 0495	  _DATA	
 base_g . . . . . . . . . . . . .	Word	 0203	  _DATA	
 base_lines . . . . . . . . . . .	Word	 01FB	  _DATA	
-base_option  . . . . . . . . . .	L Near	 059B	  _TEXT	
+base_option  . . . . . . . . . .	L Near	 05AB	  _TEXT	
 base_plus  . . . . . . . . . . .	Byte	 0205	  _DATA	
 base_t_str . . . . . . . . . . .	Byte	 048F	  _DATA	
 base_t . . . . . . . . . . . . .	Word	 0201	  _DATA	
-base_valid_loop  . . . . . . . .	L Near	 05BA	  _TEXT	
+base_valid_loop  . . . . . . . .	L Near	 05CA	  _TEXT	
 base_valid . . . . . . . . . . .	Byte	 021E	  _DATA	
-cfs_read_loop  . . . . . . . . .	L Near	 06B4	  _TEXT	
-close_and_final  . . . . . . . .	L Near	 03B5	  _TEXT	
-cmd_output_file  . . . . . . . .	L Near	 0098	  _TEXT	
+cfs_read_loop  . . . . . . . . .	L Near	 06C4	  _TEXT	
+close_and_final2 . . . . . . . .	L Near	 03C5	  _TEXT	
+close_and_final  . . . . . . . .	L Near	 0374	  _TEXT	
+cmd_output_file  . . . . . . . .	L Near	 006C	  _TEXT	
 cmdline  . . . . . . . . . . . .	Byte	 0100	  _DATA	
-count_bases_loop . . . . . . . .	L Near	 0207	  _TEXT	
-count_bases  . . . . . . . . . .	L Near	 018C	  _TEXT	
-cr_case  . . . . . . . . . . . .	L Near	 01FA	  _TEXT	
+count_bases_loop . . . . . . . .	L Near	 01C6	  _TEXT	
+count_bases  . . . . . . . . . .	L Near	 014B	  _TEXT	
+cr_case  . . . . . . . . . . . .	L Near	 01B9	  _TEXT	
 cur_position_str . . . . . . . .	Word	 0214	  _DATA	
 cur_position . . . . . . . . . .	Word	 0212	  _DATA	
-default_file . . . . . . . . . .	L Near	 006E	  _TEXT	
+default_file . . . . . . . . . .	L Near	 0057	  _TEXT	
 default_output_file  . . . . . .	Byte	 01E3	  _DATA	
-done_parsing_base  . . . . . . .	L Near	 05CE	  _TEXT	
-else_count_bases_loop  . . . . .	L Near	 0253	  _TEXT	
-end_n_option . . . . . . . . . .	L Near	 0594	  _TEXT	
-end_of_file  . . . . . . . . . .	L Near	 06EC	  _TEXT	
-end_put_a  . . . . . . . . . . .	L Near	 0650	  _TEXT	
-end_put_c  . . . . . . . . . . .	L Near	 0680	  _TEXT	
-end_put_g  . . . . . . . . . . .	L Near	 0698	  _TEXT	
-end_put_t  . . . . . . . . . . .	L Near	 0668	  _TEXT	
-end_set_count_a_loop . . . . . .	L Near	 02AE	  _TEXT	
-end_set_count_at_loop  . . . . .	L Near	 0350	  _TEXT	
-end_set_count_c_loop . . . . . .	L Near	 02D5	  _TEXT	
-end_set_count_g_loop . . . . . .	L Near	 0324	  _TEXT	
-end_set_count_plus . . . . . . .	L Near	 0378	  _TEXT	
-end_set_count_t_loop . . . . . .	L Near	 02FC	  _TEXT	
+done_parsing_base  . . . . . . .	L Near	 05DE	  _TEXT	
+else_count_bases_loop  . . . . .	L Near	 0212	  _TEXT	
+end_n_option . . . . . . . . . .	L Near	 05A4	  _TEXT	
+end_of_file  . . . . . . . . . .	L Near	 06FC	  _TEXT	
+end_put_a  . . . . . . . . . . .	L Near	 0660	  _TEXT	
+end_put_c  . . . . . . . . . . .	L Near	 0690	  _TEXT	
+end_put_g  . . . . . . . . . . .	L Near	 06A8	  _TEXT	
+end_put_t  . . . . . . . . . . .	L Near	 0678	  _TEXT	
+end_set_count_a_loop . . . . . .	L Near	 026D	  _TEXT	
+end_set_count_at_loop  . . . . .	L Near	 030F	  _TEXT	
+end_set_count_c_loop . . . . . .	L Near	 0294	  _TEXT	
+end_set_count_g_loop . . . . . .	L Near	 02E3	  _TEXT	
+end_set_count_plus . . . . . . .	L Near	 0337	  _TEXT	
+end_set_count_t_loop . . . . . .	L Near	 02BB	  _TEXT	
 error_command_line_a . . . . . .	Byte	 0281	  _DATA	
 error_command_line_f . . . . . .	Byte	 023F	  _DATA	
 error_command_line_n . . . . . .	Byte	 026B	  _DATA	
 error_command_line_o . . . . . .	Byte	 0255	  _DATA	
 error_command_line . . . . . . .	Byte	 0224	  _DATA	
 error_create_file_msg  . . . . .	Byte	 0404	  _DATA	
-error_create_file  . . . . . . .	L Near	 0399	  _TEXT	
+error_create_file  . . . . . . .	L Near	 0358	  _TEXT	
 error_open_file_msg  . . . . . .	Byte	 03C7	  _DATA	
-error_open_file  . . . . . . . .	L Near	 037C	  _TEXT	
+error_open_file  . . . . . . . .	L Near	 033B	  _TEXT	
 error_read_file_msg  . . . . . .	Byte	 03E6	  _DATA	
-error_read_file  . . . . . . . .	L Near	 038B	  _TEXT	
+error_read_file  . . . . . . . .	L Near	 034A	  _TEXT	
 error_unknown_char_msg . . . . .	Byte	 043E	  _DATA	
-error_unknown_char . . . . . . .	L Near	 0256	  _TEXT	
+error_unknown_char . . . . . . .	L Near	 0215	  _TEXT	
 error_write_file_msg . . . . . .	Byte	 0421	  _DATA	
-error_write_file . . . . . . . .	L Near	 03A7	  _TEXT	
-f_option_loop  . . . . . . . . .	L Near	 053B	  _TEXT	
-f_option . . . . . . . . . . . .	L Near	 052C	  _TEXT	
+error_write_file . . . . . . . .	L Near	 0366	  _TEXT	
+f_option_loop  . . . . . . . . .	L Near	 054B	  _TEXT	
+f_option . . . . . . . . . . . .	L Near	 053C	  _TEXT	
 file_buffer  . . . . . . . . . .	Byte	 047D	  _DATA	
 file_handle_dst  . . . . . . . .	Word	 047B	  _DATA	
 file_handle  . . . . . . . . . .	Word	 0479	  _DATA	
-file_less_than_group . . . . . .	L Near	 0414	  _TEXT	
+file_less_than_group . . . . . .	L Near	 0424	  _TEXT	
 file_size_str  . . . . . . . . .	Byte	 01F6	  _DATA	
 file_size  . . . . . . . . . . .	Word	 01F4	  _DATA	
-final  . . . . . . . . . . . . .	L Near	 0420	  _TEXT	
+final  . . . . . . . . . . . . .	L Near	 0430	  _TEXT	
 flag_error . . . . . . . . . . .	Byte	 029A	  _DATA	
 group_size_str . . . . . . . . .	Byte	 04A7	  _DATA	
 group_size . . . . . . . . . . .	Byte	 04AC	  _DATA	
-inc_file_size  . . . . . . . . .	L Near	 06E6	  _TEXT	
-increment_a  . . . . . . . . . .	L Near	 0233	  _TEXT	
-increment_c  . . . . . . . . . .	L Near	 023B	  _TEXT	
-increment_g  . . . . . . . . . .	L Near	 024B	  _TEXT	
-increment_t  . . . . . . . . . .	L Near	 0243	  _TEXT	
+inc_file_size  . . . . . . . . .	L Near	 06F6	  _TEXT	
+increment_a  . . . . . . . . . .	L Near	 01F2	  _TEXT	
+increment_c  . . . . . . . . . .	L Near	 01FA	  _TEXT	
+increment_g  . . . . . . . . . .	L Near	 020A	  _TEXT	
+increment_t  . . . . . . . . . .	L Near	 0202	  _TEXT	
 input_file . . . . . . . . . . .	Byte	 017F	  _DATA	
-invalid_option_a . . . . . . . .	L Near	 0611	  _TEXT	
-invalid_option_f . . . . . . . .	L Near	 05E1	  _TEXT	
-invalid_option_n . . . . . . . .	L Near	 0601	  _TEXT	
-invalid_option_o . . . . . . . .	L Near	 05F1	  _TEXT	
-invalid_option . . . . . . . . .	L Near	 05D1	  _TEXT	
+invalid_option_a . . . . . . . .	L Near	 0621	  _TEXT	
+invalid_option_f . . . . . . . .	L Near	 05F1	  _TEXT	
+invalid_option_n . . . . . . . .	L Near	 0611	  _TEXT	
+invalid_option_o . . . . . . . .	L Near	 0601	  _TEXT	
+invalid_option . . . . . . . . .	L Near	 05E1	  _TEXT	
 loading  . . . . . . . . . . . .	Byte	 046E	  _DATA	
-loop_file_size . . . . . . . . .	L Near	 06EA	  _TEXT	
-loop_read_file . . . . . . . . .	L Near	 00C2	  _TEXT	
+loop_file_size . . . . . . . . .	L Near	 06FA	  _TEXT	
+loop_read_file . . . . . . . . .	L Near	 0081	  _TEXT	
 msg_bases_size_input . . . . . .	Byte	 033D	  _DATA	
 msg_crlf . . . . . . . . . . . .	Byte	 029B	  _DATA	
 msg_group_count  . . . . . . . .	Byte	 0365	  _DATA	
@@ -1320,58 +1332,59 @@ msg_information  . . . . . . . .	Byte	 0309	  _DATA
 msg_input_file . . . . . . . . .	Byte	 029E	  _DATA	
 msg_lines_input_file . . . . . .	Byte	 038C	  _DATA	
 msg_output_file  . . . . . . . .	Byte	 02BC	  _DATA	
-n_option_loop  . . . . . . . . .	L Near	 057B	  _TEXT	
-n_option . . . . . . . . . . . .	L Near	 056C	  _TEXT	
-next_option  . . . . . . . . . .	L Near	 0508	  _TEXT	
+n_option_loop  . . . . . . . . .	L Near	 058B	  _TEXT	
+n_option . . . . . . . . . . . .	L Near	 057C	  _TEXT	
+next_option  . . . . . . . . . .	L Near	 0518	  _TEXT	
 nitrogen_bases . . . . . . . . .	Byte	 01E9	  _DATA	
-no_arguments . . . . . . . . . .	L Near	 0621	  _TEXT	
-o_option_loop  . . . . . . . . .	L Near	 055B	  _TEXT	
-o_option . . . . . . . . . . . .	L Near	 054C	  _TEXT	
+no_arguments . . . . . . . . . .	L Near	 0631	  _TEXT	
+o_option_loop  . . . . . . . . .	L Near	 056B	  _TEXT	
+o_option . . . . . . . . . . . .	L Near	 055C	  _TEXT	
 output_file  . . . . . . . . . .	Byte	 01B1	  _DATA	
-parse_command_line . . . . . . .	L Near	 04F7	  _TEXT	
+parse_command_line . . . . . . .	L Near	 0507	  _TEXT	
 position_str . . . . . . . . . .	Word	 0208	  _DATA	
 position . . . . . . . . . . . .	Word	 0206	  _DATA	
-ps_1 . . . . . . . . . . . . . .	L Near	 04BF	  _TEXT	
-s_loop_a . . . . . . . . . . . .	L Near	 063C	  _TEXT	
-s_loop_c . . . . . . . . . . . .	L Near	 066C	  _TEXT	
-s_loop_g . . . . . . . . . . . .	L Near	 0684	  _TEXT	
-s_loop_plus  . . . . . . . . . .	L Near	 069C	  _TEXT	
-s_loop_t . . . . . . . . . . . .	L Near	 0654	  _TEXT	
+print_default_outfile  . . . . .	L Near	 03B0	  _TEXT	
+ps_1 . . . . . . . . . . . . . .	L Near	 04CF	  _TEXT	
+s_loop_a . . . . . . . . . . . .	L Near	 064C	  _TEXT	
+s_loop_c . . . . . . . . . . . .	L Near	 067C	  _TEXT	
+s_loop_g . . . . . . . . . . . .	L Near	 0694	  _TEXT	
+s_loop_plus  . . . . . . . . . .	L Near	 06AC	  _TEXT	
+s_loop_t . . . . . . . . . . . .	L Near	 0664	  _TEXT	
 s_nitrogen_bases . . . . . . . .	Byte	 01EE	  _DATA	
-s_put_a  . . . . . . . . . . . .	L Near	 064B	  _TEXT	
-s_put_c  . . . . . . . . . . . .	L Near	 067B	  _TEXT	
-s_put_g  . . . . . . . . . . . .	L Near	 0693	  _TEXT	
-s_put_plus . . . . . . . . . . .	L Near	 06AB	  _TEXT	
-s_put_t  . . . . . . . . . . . .	L Near	 0663	  _TEXT	
-s_ret  . . . . . . . . . . . . .	L Near	 06AF	  _TEXT	
-set_count_a_loop . . . . . . . .	L Near	 02A1	  _TEXT	
-set_count_at_loop  . . . . . . .	L Near	 0343	  _TEXT	
-set_count_a  . . . . . . . . . .	L Near	 028F	  _TEXT	
-set_count_bases  . . . . . . . .	L Near	 0265	  _TEXT	
-set_count_c_loop . . . . . . . .	L Near	 02C8	  _TEXT	
-set_count_cg_loop  . . . . . . .	L Near	 036B	  _TEXT	
-set_count_c  . . . . . . . . . .	L Near	 02B6	  _TEXT	
-set_count_g_loop . . . . . . . .	L Near	 0317	  _TEXT	
-set_count_g  . . . . . . . . . .	L Near	 0305	  _TEXT	
-set_count_plus . . . . . . . . .	L Near	 032D	  _TEXT	
-set_count_t_loop . . . . . . . .	L Near	 02EF	  _TEXT	
-set_count_t  . . . . . . . . . .	L Near	 02DD	  _TEXT	
-set_header_a . . . . . . . . . .	L Near	 00E9	  _TEXT	
-set_header_bases . . . . . . . .	L Near	 00C6	  _TEXT	
-set_header_c . . . . . . . . . .	L Near	 00FF	  _TEXT	
-set_header_g . . . . . . . . . .	L Near	 012B	  _TEXT	
-set_header_plus  . . . . . . . .	L Near	 0141	  _TEXT	
-set_header_t . . . . . . . . . .	L Near	 0115	  _TEXT	
-skip_space . . . . . . . . . . .	L Near	 04F7	  _TEXT	
-start_count  . . . . . . . . . .	L Near	 0168	  _TEXT	
-sw_continua2 . . . . . . . . . .	L Near	 0478	  _TEXT	
-sw_continue  . . . . . . . . . .	L Near	 0454	  _TEXT	
-sw_do  . . . . . . . . . . . . .	L Near	 0435	  _TEXT	
+s_put_a  . . . . . . . . . . . .	L Near	 065B	  _TEXT	
+s_put_c  . . . . . . . . . . . .	L Near	 068B	  _TEXT	
+s_put_g  . . . . . . . . . . . .	L Near	 06A3	  _TEXT	
+s_put_plus . . . . . . . . . . .	L Near	 06BB	  _TEXT	
+s_put_t  . . . . . . . . . . . .	L Near	 0673	  _TEXT	
+s_ret  . . . . . . . . . . . . .	L Near	 06BF	  _TEXT	
+set_count_a_loop . . . . . . . .	L Near	 0260	  _TEXT	
+set_count_at_loop  . . . . . . .	L Near	 0302	  _TEXT	
+set_count_a  . . . . . . . . . .	L Near	 024E	  _TEXT	
+set_count_bases  . . . . . . . .	L Near	 0224	  _TEXT	
+set_count_c_loop . . . . . . . .	L Near	 0287	  _TEXT	
+set_count_cg_loop  . . . . . . .	L Near	 032A	  _TEXT	
+set_count_c  . . . . . . . . . .	L Near	 0275	  _TEXT	
+set_count_g_loop . . . . . . . .	L Near	 02D6	  _TEXT	
+set_count_g  . . . . . . . . . .	L Near	 02C4	  _TEXT	
+set_count_plus . . . . . . . . .	L Near	 02EC	  _TEXT	
+set_count_t_loop . . . . . . . .	L Near	 02AE	  _TEXT	
+set_count_t  . . . . . . . . . .	L Near	 029C	  _TEXT	
+set_header_a . . . . . . . . . .	L Near	 00A8	  _TEXT	
+set_header_bases . . . . . . . .	L Near	 0085	  _TEXT	
+set_header_c . . . . . . . . . .	L Near	 00BE	  _TEXT	
+set_header_g . . . . . . . . . .	L Near	 00EA	  _TEXT	
+set_header_plus  . . . . . . . .	L Near	 0100	  _TEXT	
+set_header_t . . . . . . . . . .	L Near	 00D4	  _TEXT	
+skip_space . . . . . . . . . . .	L Near	 0507	  _TEXT	
+start_count  . . . . . . . . . .	L Near	 0127	  _TEXT	
+sw_continua2 . . . . . . . . . .	L Near	 0488	  _TEXT	
+sw_continue  . . . . . . . . . .	L Near	 0464	  _TEXT	
+sw_do  . . . . . . . . . . . . .	L Near	 0445	  _TEXT	
 sw_f . . . . . . . . . . . . . .	Byte	 0480	  _DATA	
 sw_m . . . . . . . . . . . . . .	Word	 0481	  _DATA	
 sw_n . . . . . . . . . . . . . .	Word	 047E	  _DATA	
-sw_store . . . . . . . . . . . .	L Near	 044A	  _TEXT	
-valid_base . . . . . . . . . . .	L Near	 05C8	  _TEXT	
+sw_store . . . . . . . . . . . .	L Near	 045A	  _TEXT	
+valid_base . . . . . . . . . . .	L Near	 05D8	  _TEXT	
 
 	   0 Warnings
 	   0 Errors

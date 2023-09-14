@@ -1,0 +1,3 @@
+Tempo do caso1000.txt na minha máquina =~ 1 minuto e 45 segundos
+
+Não está travando, está apenas meio lento

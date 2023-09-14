@@ -87,14 +87,6 @@ group_size            db    0
    jc       error_open_file      ; If (CF == 1), erro ao abrir o arquivo
    mov      file_handle, ax      ; Salva handle do arquivo
 
-   lea      bx, msg_input_file
-   call     printf_s
-   lea      bx, input_file
-   call     printf_s
-
-   lea      bx, msg_crlf
-   call     printf_s
-
    lea      bx, file_handle
    call     calculate_file_size
 
@@ -104,8 +96,7 @@ group_size            db    0
 
    lea      bx, output_file
    cmp      [bx], 0
-   je       default_file
-   jmp      cmd_output_file
+   jne       cmd_output_file
 
 default_file:
    lea      dx, default_output_file
@@ -113,12 +104,6 @@ default_file:
    jc       error_create_file
    mov      file_handle_dst, ax      ; Salva handle do arquivo
    lea      bx, file_handle_dst
-   lea      bx, msg_output_file
-   call     printf_s
-   lea      bx, default_output_file
-   call     printf_s
-   lea      bx, msg_crlf
-   call     printf_s
    jmp      loop_read_file
 
 cmd_output_file:
@@ -127,12 +112,6 @@ cmd_output_file:
    jc       error_create_file
    lea      bx, file_handle_dst
    mov      file_handle_dst, ax      ; Salva handle do arquivo
-   lea      bx, msg_output_file
-   call     printf_s
-   lea      bx, output_file
-   call     printf_s
-   lea      bx, msg_crlf
-   call     printf_s
    jmp      loop_read_file
 
 loop_read_file:
@@ -465,9 +444,41 @@ error_write_file:
       jmp   close_and_final
 
 close_and_final:
+   lea      bx, msg_crlf
+   call     printf_s
 
-   ; Display counts of 'A', 'C', 'T', 'G'
-   ; Após incrementar cada contador (increment_a, increment_c, increment_t, increment_g), converta o valor para string
+   lea      bx, msg_input_file
+   call     printf_s
+   lea      bx, input_file
+   call     printf_s
+
+   lea      bx, msg_crlf
+   call     printf_s
+
+   lea      bx, output_file
+   cmp      [bx], 0
+   je       print_default_outfile
+
+   lea      bx, msg_output_file
+   call     printf_s
+   lea      bx, output_file
+   call     printf_s
+   lea      bx, msg_crlf
+   call     printf_s
+
+   jmp      close_and_final2
+
+print_default_outfile:
+
+   lea      bx, msg_output_file
+   call     printf_s
+   lea      bx, default_output_file
+   call     printf_s
+   lea      bx, msg_crlf
+   call     printf_s
+
+close_and_final2:
+
    lea   bx, msg_group_size
    call  printf_s
    lea   bx, group_size_str
